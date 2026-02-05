@@ -20,7 +20,11 @@ import {
     Calendar,
     Upload,
     GripVertical,
-    Loader2
+    Loader2,
+    CheckCircle2,
+    ExternalLink,
+    Copy,
+    Check
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
@@ -30,6 +34,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { FieldRenderer } from '@/components/FieldRenderer';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 // Types
 interface FormField {
@@ -41,6 +53,7 @@ interface FormField {
     required: boolean;
     options?: string[];
     logic?: unknown;
+    requireRange?: boolean;
 }
 
 const componentList = [
@@ -64,6 +77,10 @@ export default function BuilderPage() {
     const [formTitle, setFormTitle] = useState('');
     const [fields, setFields] = useState<FormField[]>([]);
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
+    const [previewDates, setPreviewDates] = useState<Record<string, Date | undefined>>({});
+    const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+    const [publishing, setPublishing] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
 
     // Fetch initial data
     useEffect(() => {
@@ -109,6 +126,40 @@ export default function BuilderPage() {
 
         return () => clearTimeout(timeout);
     }, [fields, id, loading]);
+
+    const onPublish = async () => {
+        setPublishing(true);
+        try {
+            const res = await fetch(`/api/forms/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ settings: { isActive: true } }),
+            });
+
+            if (!res.ok) throw new Error('Failed to publish form');
+
+            setIsPublishModalOpen(true);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to publish form. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setPublishing(false);
+        }
+    };
+
+    const copyToClipboard = () => {
+        const url = window.location.origin + '/f/' + id;
+        navigator.clipboard.writeText(url);
+        setIsCopied(true);
+        setTimeout(() => setIsCopied(false), 2000);
+        toast({
+            title: "Copied!",
+            description: "Form link copied to clipboard.",
+        });
+    };
 
     // Field Management Functions
     const addField = (type: string) => {
@@ -172,12 +223,20 @@ export default function BuilderPage() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button variant="ghost" className="glass border-white/5 gap-2">
+                    <Button
+                        variant="ghost"
+                        className="glass border-white/5 gap-2"
+                        onClick={() => window.open(`/f/${id}?preview=true`, '_blank')}
+                    >
                         <Eye className="w-4 h-4" />
                         Preview
                     </Button>
-                    <Button className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-0 gap-2">
-                        <Save className="w-4 h-4" />
+                    <Button
+                        onClick={onPublish}
+                        disabled={publishing}
+                        className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-0 gap-2"
+                    >
+                        {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Publish
                     </Button>
                 </div>
@@ -264,41 +323,12 @@ export default function BuilderPage() {
                                         </div>
 
                                         {/* Field Content Visualization */}
-                                        <div className="pointer-events-none">
-                                            {(field.type === 'text' || field.type === 'email' || field.type === 'number') && (
-                                                <Input placeholder={field.placeholder} disabled className="bg-white/5 border-white/10" />
-                                            )}
-                                            {field.type === 'textarea' && (
-                                                <Textarea placeholder={field.placeholder} disabled className="bg-white/5 border-white/10" />
-                                            )}
-                                            {field.type === 'select' && (
-                                                <div className="w-full p-2 rounded-md bg-white/5 border border-white/10 text-muted-foreground flex justify-between items-center text-sm">
-                                                    <span>{field.placeholder || "Select an option..."}</span>
-                                                    <ChevronDown className="w-4 h-4" />
-                                                </div>
-                                            )}
-                                            {(field.type === 'radio' || field.type === 'checkbox') && (
-                                                <div className="grid grid-cols-2 gap-4">
-                                                    {field.options?.map((opt, i) => (
-                                                        <div key={i} className="flex items-center gap-2">
-                                                            {field.type === 'radio' ? <CircleDot className="w-4 h-4 opacity-50" /> : <CheckSquare className="w-4 h-4 opacity-50" />}
-                                                            <span className="text-sm">{opt}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {field.type === 'date' && (
-                                                <div className="w-full p-2 rounded-md bg-white/5 border border-white/10 text-muted-foreground flex items-center gap-2 text-sm">
-                                                    <Calendar className="w-4 h-4" />
-                                                    <span>Pick a date...</span>
-                                                </div>
-                                            )}
-                                            {field.type === 'file' && (
-                                                <div className="w-full p-8 border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center gap-2 text-muted-foreground">
-                                                    <Upload className="w-8 h-8 opacity-20" />
-                                                    <span className="text-sm">Click to upload file</span>
-                                                </div>
-                                            )}
+                                        <div className="relative">
+                                            <FieldRenderer
+                                                field={field}
+                                                selectedDate={previewDates[field.id]}
+                                                onDateChange={(date) => setPreviewDates(prev => ({ ...prev, [field.id]: date }))}
+                                            />
                                         </div>
                                     </div>
                                 ))
@@ -359,6 +389,21 @@ export default function BuilderPage() {
                                     />
                                 </div>
 
+                                {selectedField.type === 'date' && (
+                                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                        <div className="space-y-0.5">
+                                            <Label className="font-semibold">Require Specific Range</Label>
+                                            <p className="text-[10px] text-muted-foreground italic">Optional: Placeholder for range logic</p>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedField.requireRange || false}
+                                            onChange={(e) => updateField(selectedField.id, { requireRange: e.target.checked })}
+                                            className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                )}
+
                                 {(['select', 'radio', 'checkbox'].includes(selectedField.type)) && (
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
@@ -413,6 +458,58 @@ export default function BuilderPage() {
                     </ScrollArea>
                 </div>
             </div>
+            {/* Publish Success Modal */}
+            <Dialog open={isPublishModalOpen} onOpenChange={setIsPublishModalOpen}>
+                <DialogContent className="glass border-white/10 max-w-md p-8 rounded-[2rem]">
+                    <DialogHeader className="space-y-4">
+                        <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                            <CheckCircle2 className="w-10 h-10 text-green-400" />
+                        </div>
+                        <DialogTitle className="text-3xl font-black text-center bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40">
+                            Form is now Live! 🚀
+                        </DialogTitle>
+                        <DialogDescription className="text-center text-lg text-muted-foreground">
+                            Your form is ready to accept responses. Share the link below with your audience.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-6 mt-8">
+                        <div className="space-y-2">
+                            <Label className="text-xs uppercase tracking-widest font-bold text-purple-400">Public Form Link</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    readOnly
+                                    value={window.location.origin + '/f/' + id}
+                                    className="glass-input h-14 rounded-2xl font-medium text-purple-200"
+                                />
+                                <Button
+                                    onClick={copyToClipboard}
+                                    className="h-14 w-14 glass border-white/10 rounded-2xl flex-shrink-0"
+                                >
+                                    {isCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3">
+                            <Button
+                                onClick={() => window.open(`/f/${id}`, '_blank')}
+                                className="h-14 rounded-2xl bg-purple-600 hover:bg-purple-500 font-bold gap-2 text-lg"
+                            >
+                                <ExternalLink className="w-5 h-5" />
+                                View Live Form
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setIsPublishModalOpen(false)}
+                                className="h-14 rounded-2xl glass border-white/5 font-bold"
+                            >
+                                Continue Editing
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
