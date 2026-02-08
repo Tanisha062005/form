@@ -7,6 +7,12 @@ const SubmissionSchema = new Schema({
         ip: { type: String },
         userAgent: { type: String },
     },
+    locationData: {
+        latitude: Number,
+        longitude: Number,
+        city: String,
+        timestamp: Date
+    },
     submittedAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 

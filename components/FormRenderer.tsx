@@ -8,8 +8,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Upload,
     Loader2,
-    CheckCircle2
+    CheckCircle2,
+    Smartphone,
+    Tablet,
+
+    Laptop,
+    MapPin,
+    Navigation,
 } from 'lucide-react';
+import useDeviceType from '@/hooks/use-device-type';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -35,6 +42,7 @@ interface FormField {
         minChars?: number;
         maxChars?: number;
         exactDigits?: number;
+        captureCity?: boolean;
     };
 }
 
@@ -57,6 +65,28 @@ interface FormRendererProps {
 export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     const router = useRouter();
     const [submitting, setSubmitting] = useState(false);
+    const [locationStates, setLocationStates] = useState<Record<string, { loading: boolean, error: boolean, data?: { lat: number, lng: number, city?: string } }>>({});
+    const device = useDeviceType();
+
+    // Dynamic Glass Styles based on Device
+    const glassStyles = useMemo(() => {
+        if (device === 'mobile') {
+            return {
+                padding: "p-4",
+                blur: "backdrop-blur-md",
+                fontSize: "text-sm",
+                gap: "gap-4",
+                spaceY: "space-y-6"
+            };
+        }
+        return {
+            padding: "p-10",
+            blur: "backdrop-blur-xl",
+            fontSize: "text-base",
+            gap: "gap-8",
+            spaceY: "space-y-12"
+        };
+    }, [device]);
 
     // Dynamic Zod Schema Generation
     const schema = useMemo(() => {
@@ -124,6 +154,51 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
     const values = watch();
 
+    const getLocation = (fieldId: string, captureCity: boolean) => {
+        setLocationStates(prev => ({ ...prev, [fieldId]: { loading: true, error: false } }));
+
+        if (!navigator.geolocation) {
+            setLocationStates(prev => ({ ...prev, [fieldId]: { loading: false, error: true } }));
+            toast.error("Geolocation is not supported by your browser");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                let city = undefined;
+
+                if (captureCity) {
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                        const data = await res.json();
+                        city = data.address?.city || data.address?.town || data.address?.village || "Unknown Location";
+                    } catch (e) {
+                        console.error("Failed to fetch city", e);
+                    }
+                }
+
+                setLocationStates(prev => ({
+                    ...prev,
+                    [fieldId]: {
+                        loading: false,
+                        error: false,
+                        data: { lat: latitude, lng: longitude, city }
+                    }
+                }));
+
+                // Update form value for validation if needed, though location is handled somewhat separately
+                // Ideally we sync this with react-hook-form if it's required
+                // For now we just store state to submit alongside
+            },
+            (error) => {
+                console.error("Error getting location", error);
+                setLocationStates(prev => ({ ...prev, [fieldId]: { loading: false, error: true } }));
+                toast.error("Location permission denied or unavailable");
+            }
+        );
+    };
+
     // Progress calculation
     const progress = useMemo(() => {
         const requiredFields = form.fields.filter(f => f.required);
@@ -149,7 +224,20 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
             const res = await fetch(`/api/f/${form._id}/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers: data }),
+                body: JSON.stringify({
+                    answers: data,
+                    locationData: Object.keys(locationStates).reduce((acc: any, key) => {
+                        if (locationStates[key]?.data) {
+                            acc = {
+                                latitude: locationStates[key].data?.lat,
+                                longitude: locationStates[key].data?.lng,
+                                city: locationStates[key].data?.city,
+                                timestamp: new Date()
+                            };
+                        }
+                        return acc;
+                    }, undefined)
+                }),
             });
 
             if (!res.ok) throw new Error('Failed to submit form');
@@ -170,7 +258,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     };
 
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-12 relative">
+        <form onSubmit={handleSubmit(onSubmit)} className={`${glassStyles.spaceY} relative transition-all duration-500`}>
             {/* Sticky Progress Bar */}
             <div className="sticky top-24 z-50 w-full mb-12">
                 <div className="glass backdrop-blur-xl border border-white/10 p-4 rounded-2xl flex items-center gap-4 transition-all duration-500">
@@ -223,7 +311,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: -20 }}
                                 transition={{ duration: 0.3, ease: "easeOut" }}
-                                className="glass p-8 rounded-3xl border border-white/5 space-y-4 transition-all hover:border-white/10 group"
+                                className={`glass ${glassStyles.padding} rounded-3xl border border-white/5 space-y-4 transition-all hover:border-white/10 group ${glassStyles.blur}`}
                             >
                                 <div className="space-y-1">
                                     <Label className="text-lg font-bold flex items-center gap-2">
@@ -301,6 +389,63 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                             <Upload className="w-12 h-12 opacity-30" />
                                             <span className="text-lg font-semibold">Click to upload file</span>
                                         </div>
+                                    ) : field.type === 'location' ? (
+                                        <div className="space-y-4">
+                                            {locationStates[field.id]?.error ? (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-red-400 mb-2">
+                                                        <XCircle className="w-4 h-4" />
+                                                        <span className="text-sm font-medium">Location access denied. Please enter manually.</span>
+                                                    </div>
+                                                    <Input
+                                                        {...register(field.id)}
+                                                        placeholder="Enter your location manually..."
+                                                        className="glass-input h-14 text-lg rounded-2xl transition-all focus:ring-2 focus:ring-purple-500/20"
+                                                    />
+                                                </div>
+                                            ) : locationStates[field.id]?.data ? (
+                                                <div className="flex items-center gap-3 p-4 rounded-2xl glass bg-white/10 border border-white/20">
+                                                    <div className="p-3 rounded-full bg-green-500/20">
+                                                        <MapPin className="w-6 h-6 text-green-400" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <p className="font-bold text-lg text-white">
+                                                            {locationStates[field.id].data?.city || "Location Pinned"}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground font-mono">
+                                                            {locationStates[field.id].data?.lat.toFixed(4)}, {locationStates[field.id].data?.lng.toFixed(4)}
+                                                        </p>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        onClick={() => setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: false, data: undefined } }))} // Reset
+                                                        className="text-white/50 hover:text-white"
+                                                    >
+                                                        Retry
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    disabled={locationStates[field.id]?.loading}
+                                                    onClick={() => getLocation(field.id, field.validation?.captureCity || false)}
+                                                    className={`w-full h-16 rounded-2xl border border-white/20 hover:bg-white/10 transition-all font-bold text-lg gap-3 ${locationStates[field.id]?.loading ? 'bg-white/5' : 'glass bg-white/5 backdrop-blur-md'}`}
+                                                >
+                                                    {locationStates[field.id]?.loading ? (
+                                                        <>
+                                                            <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
+                                                            <span className="animate-pulse text-purple-300">Sensing coordinates...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Navigation className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
+                                                            Share Current Location
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </div>
                                     ) : null}
 
                                     <AnimatePresence>
@@ -343,7 +488,29 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                     )}
                 </Button>
             </div>
-        </form>
+            {/* Smart Optimization Badge */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+                className="fixed bottom-6 right-6 z-50 pointer-events-none"
+            >
+                <div className="glass bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
+                    <motion.div
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ repeat: Infinity, duration: 2 }}
+                        className="text-purple-400"
+                    >
+                        {device === 'mobile' && <Smartphone className="w-4 h-4" />}
+                        {device === 'tablet' && <Tablet className="w-4 h-4" />}
+                        {device === 'desktop' && <Laptop className="w-4 h-4" />}
+                    </motion.div>
+                    <span className="text-xs font-semibold text-white/50">
+                        Smart Mode: {device.charAt(0).toUpperCase() + device.slice(1)} Optimized
+                    </span>
+                </div>
+            </motion.div>
+        </form >
     );
 }
 

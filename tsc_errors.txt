@@ -1,0 +1,3 @@
+﻿app/builder/[id]/page.tsx(455,88): error TS2339: Property 'captureCity' does not exist on type '{ minChars?: number | undefined; maxChars?: number | undefined; exactDigits?: number | undefined; }'.
+app/builder/[id]/page.tsx(459,61): error TS2353: Object literal may only specify known properties, and 'captureCity' does not exist in type '{ minChars?: number | undefined; maxChars?: number | undefined; exactDigits?: number | undefined; }'.
+components/FormRenderer.tsx(431,108): error TS2339: Property 'captureCity' does not exist on type '{ minChars?: number | undefined; maxChars?: number | undefined; exactDigits?: number | undefined; }'.

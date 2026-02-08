@@ -28,7 +28,10 @@ import {
     Zap,
     Shield,
     MessageSquare,
-    Globe
+
+    Globe,
+    MapPin,
+    Navigation,
 } from 'lucide-react';
 import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
@@ -65,6 +68,7 @@ interface FormField {
         minChars?: number;
         maxChars?: number;
         exactDigits?: number;
+        captureCity?: boolean;
     };
     requireRange?: boolean;
 }
@@ -78,6 +82,7 @@ const componentList = [
     { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
     { type: 'date', label: 'Date Picker', icon: Calendar },
     { type: 'file', label: 'File Upload', icon: Upload },
+    { type: 'location', label: 'Location Pin', icon: MapPin },
 ];
 
 export default function BuilderPage() {
@@ -439,6 +444,26 @@ export default function BuilderPage() {
                                                 className="bg-white/5 border-white/10 min-h-[60px] text-sm"
                                             />
                                         </div>
+
+                                        {selectedField.type === 'location' && (
+                                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                                <div className="space-y-0.5">
+                                                    <Label className="font-semibold">Capture City Name</Label>
+                                                    <p className="text-[10px] text-muted-foreground italic">Use Reverse Geocoding</p>
+                                                </div>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedField.validation?.captureCity || false}
+                                                    onChange={(e) => updateField(selectedField.id, {
+                                                        validation: {
+                                                            ...selectedField.validation,
+                                                            captureCity: e.target.checked
+                                                        }
+                                                    })}
+                                                    className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
+                                                />
+                                            </div>
+                                        )}
 
                                         <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
                                             <Label className="font-semibold">Required Field</Label>
