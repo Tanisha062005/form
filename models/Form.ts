@@ -13,6 +13,7 @@ const FieldSchema = new Schema({
     required: { type: Boolean, default: false },
     options: [{ type: String }],
     logic: { type: Object },
+    validation: { type: Object },
 });
 
 const FormSchema = new Schema({
@@ -23,6 +24,7 @@ const FormSchema = new Schema({
     settings: {
         expiryDate: { type: Date },
         responseLimit: { type: Number },
+        singleSubmission: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
     },
     folder: { type: String, default: 'General' },

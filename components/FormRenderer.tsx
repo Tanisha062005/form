@@ -26,6 +26,16 @@ interface FormField {
     helpText?: string;
     required: boolean;
     options?: string[];
+    logic?: {
+        triggerFieldId: string;
+        condition: 'equals' | 'not_equals';
+        value: string;
+    };
+    validation?: {
+        minChars?: number;
+        maxChars?: number;
+        exactDigits?: number;
+    };
 }
 
 interface FormRendererProps {
@@ -34,9 +44,15 @@ interface FormRendererProps {
         title: string;
         description?: string;
         fields: FormField[];
+        settings?: {
+            singleSubmission?: boolean;
+            responseLimit?: number;
+            expiryDate?: Date;
+        };
     };
     isPreview?: boolean;
 }
+
 
 export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     const router = useRouter();
@@ -52,8 +68,17 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 fieldSchema = z.string().email("Invalid email format");
             } else if (field.type === 'number') {
                 fieldSchema = z.string().refine((val) => !isNaN(Number(val)), "Must be a number");
+                if (field.validation?.exactDigits) {
+                    fieldSchema = fieldSchema.refine((val: string) => val.length === field.validation?.exactDigits, `Must be exactly ${field.validation.exactDigits} digits`);
+                }
             } else if (['text', 'textarea', 'select', 'radio'].includes(field.type)) {
                 fieldSchema = z.string();
+                if (field.validation?.minChars) {
+                    fieldSchema = fieldSchema.min(field.validation.minChars, `Minimum ${field.validation.minChars} characters required`);
+                }
+                if (field.validation?.maxChars) {
+                    fieldSchema = fieldSchema.max(field.validation.maxChars, `Maximum ${field.validation.maxChars} characters allowed`);
+                }
             } else if (field.type === 'checkbox') {
                 fieldSchema = z.array(z.string());
             } else if (field.type === 'date') {
@@ -66,13 +91,13 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 if (field.type === 'checkbox') {
                     fieldSchema = fieldSchema.min(1, "Please select at least one option");
                 } else if (field.type === 'date') {
-                    fieldSchema = z.date({ error: "This field is required" });
+                    fieldSchema = z.date({ error: "This field is required" }).nullable().refine(val => val !== null, "This field is required");
                 } else {
                     fieldSchema = fieldSchema.min(1, "This field is required");
                 }
             } else {
                 if (field.type === 'date') {
-                    fieldSchema = fieldSchema.optional();
+                    fieldSchema = fieldSchema.optional().nullable();
                 } else {
                     fieldSchema = fieldSchema.optional().or(z.literal("")).or(z.null());
                 }
@@ -129,6 +154,11 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
             if (!res.ok) throw new Error('Failed to submit form');
 
+            // Handle Single Submission Cookie
+            if (form.settings?.singleSubmission) {
+                document.cookie = `form_submitted_${form._id}=true; max-age=${60 * 60 * 24 * 365}; path=/`;
+            }
+
             toast.success('Form submitted successfully!');
             router.push(`/f/${form._id}/success`);
         } catch (error) {
@@ -170,102 +200,127 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
             {/* Form Fields */}
             <div className="space-y-8">
-                {form.fields.map((field) => (
-                    <div key={field.id} className="glass p-8 rounded-3xl border border-white/5 space-y-4 transition-all hover:border-white/10 group">
-                        <div className="space-y-1">
-                            <Label className="text-lg font-bold flex items-center gap-2">
-                                {field.label}
-                                {field.required && <span className="text-red-500">*</span>}
-                            </Label>
-                            {field.helpText && <p className="text-sm text-muted-foreground italic font-medium opacity-70">{field.helpText}</p>}
-                        </div>
+                <AnimatePresence mode="popLayout">
+                    {form.fields.map((field) => {
+                        // Conditional Logic Check
+                        if (field.logic?.triggerFieldId) {
+                            const triggerValue = values[field.logic.triggerFieldId];
+                            const condition = field.logic.condition;
+                            const targetValue = field.logic.value;
 
-                        <div className="pt-2">
-                            {field.type === 'text' || field.type === 'email' || field.type === 'number' ? (
-                                <Input
-                                    {...register(field.id)}
-                                    placeholder={field.placeholder}
-                                    className="glass-input h-14 text-lg rounded-2xl"
-                                />
-                            ) : field.type === 'textarea' ? (
-                                <Textarea
-                                    {...register(field.id)}
-                                    placeholder={field.placeholder}
-                                    className="glass-input min-h-[160px] text-lg rounded-2xl p-6"
-                                />
-                            ) : field.type === 'select' ? (
-                                <select
-                                    {...register(field.id)}
-                                    className="w-full glass border border-white/10 bg-white/5 h-14 rounded-2xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-lg"
-                                >
-                                    <option value="" className="bg-[#030014]">{field.placeholder || 'Select an option'}</option>
-                                    {field.options?.map(opt => (
-                                        <option key={opt} value={opt} className="bg-[#030014]">{opt}</option>
-                                    ))}
-                                </select>
-                            ) : field.type === 'radio' ? (
-                                <div className="space-y-3">
-                                    {field.options?.map(opt => (
-                                        <label key={opt} className="flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all cursor-pointer group/opt">
-                                            <input
-                                                {...register(field.id)}
-                                                type="radio"
-                                                value={opt}
-                                                className="w-5 h-5 accent-purple-500"
-                                            />
-                                            <span className="text-lg font-medium group-hover/opt:text-purple-300 transition-colors">{opt}</span>
-                                        </label>
-                                    ))}
+                            const isVisible = condition === 'equals'
+                                ? triggerValue === targetValue
+                                : triggerValue !== targetValue;
+
+                            if (!isVisible) return null;
+                        }
+
+                        return (
+                            <motion.div
+                                key={field.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -20 }}
+                                transition={{ duration: 0.3, ease: "easeOut" }}
+                                className="glass p-8 rounded-3xl border border-white/5 space-y-4 transition-all hover:border-white/10 group"
+                            >
+                                <div className="space-y-1">
+                                    <Label className="text-lg font-bold flex items-center gap-2">
+                                        {field.label}
+                                        {field.required && <span className="text-red-500">*</span>}
+                                    </Label>
+                                    {field.helpText && <p className="text-sm text-muted-foreground italic font-medium opacity-70">{field.helpText}</p>}
                                 </div>
-                            ) : field.type === 'checkbox' ? (
-                                <div className="space-y-3">
-                                    {field.options?.map(opt => (
-                                        <label key={opt} className="flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all cursor-pointer group/opt">
-                                            <input
-                                                {...register(field.id)}
-                                                type="checkbox"
-                                                value={opt}
-                                                className="w-5 h-5 accent-purple-500 rounded"
-                                            />
-                                            <span className="text-lg font-medium group-hover/opt:text-purple-300 transition-colors">{opt}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            ) : field.type === 'date' ? (
-                                <Controller
-                                    name={field.id}
-                                    control={control}
-                                    render={({ field: { value, onChange } }) => (
-                                        <DatePicker
-                                            date={value}
-                                            onChange={onChange}
+
+                                <div className="pt-2">
+                                    {field.type === 'text' || field.type === 'email' || field.type === 'number' ? (
+                                        <Input
+                                            {...register(field.id)}
                                             placeholder={field.placeholder}
+                                            className="glass-input h-14 text-lg rounded-2xl transition-all focus:ring-2 focus:ring-purple-500/20"
                                         />
-                                    )}
-                                />
-                            ) : field.type === 'file' ? (
-                                <div className="w-full p-12 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4 text-muted-foreground hover:border-purple-500/50 hover:bg-purple-500/5 transition-all cursor-pointer">
-                                    <Upload className="w-12 h-12 opacity-30" />
-                                    <span className="text-lg font-semibold">Click to upload file</span>
-                                </div>
-                            ) : null}
+                                    ) : field.type === 'textarea' ? (
+                                        <Textarea
+                                            {...register(field.id)}
+                                            placeholder={field.placeholder}
+                                            className="glass-input min-h-[160px] text-lg rounded-2xl p-6 transition-all focus:ring-2 focus:ring-purple-500/20"
+                                        />
+                                    ) : field.type === 'select' ? (
+                                        <select
+                                            {...register(field.id)}
+                                            className="w-full glass border border-white/10 bg-white/5 h-14 rounded-2xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-lg"
+                                        >
+                                            <option value="" className="bg-[#030014]">{field.placeholder || 'Select an option'}</option>
+                                            {field.options?.map(opt => (
+                                                <option key={opt} value={opt} className="bg-[#030014]">{opt}</option>
+                                            ))}
+                                        </select>
+                                    ) : field.type === 'radio' ? (
+                                        <div className="space-y-3">
+                                            {field.options?.map(opt => (
+                                                <label key={opt} className="flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all cursor-pointer group/opt">
+                                                    <input
+                                                        {...register(field.id)}
+                                                        type="radio"
+                                                        value={opt}
+                                                        className="w-5 h-5 accent-purple-500"
+                                                    />
+                                                    <span className="text-lg font-medium group-hover/opt:text-purple-300 transition-colors">{opt}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    ) : field.type === 'checkbox' ? (
+                                        <div className="space-y-3">
+                                            {field.options?.map(opt => (
+                                                <label key={opt} className="flex items-center gap-4 p-4 rounded-2xl border border-white/5 bg-white/5 hover:bg-white/10 transition-all cursor-pointer group/opt">
+                                                    <input
+                                                        {...register(field.id)}
+                                                        type="checkbox"
+                                                        value={opt}
+                                                        className="w-5 h-5 accent-purple-500 rounded"
+                                                    />
+                                                    <span className="text-lg font-medium group-hover/opt:text-purple-300 transition-colors">{opt}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    ) : field.type === 'date' ? (
+                                        <Controller
+                                            name={field.id}
+                                            control={control}
+                                            render={({ field: { value, onChange } }) => (
+                                                <DatePicker
+                                                    date={value}
+                                                    onChange={onChange}
+                                                    placeholder={field.placeholder}
+                                                />
+                                            )}
+                                        />
+                                    ) : field.type === 'file' ? (
+                                        <div className="w-full p-12 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4 text-muted-foreground hover:border-purple-500/50 hover:bg-purple-500/5 transition-all cursor-pointer">
+                                            <Upload className="w-12 h-12 opacity-30" />
+                                            <span className="text-lg font-semibold">Click to upload file</span>
+                                        </div>
+                                    ) : null}
 
-                            <AnimatePresence>
-                                {errors[field.id] && (
-                                    <motion.p
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className="text-pink-500 text-sm font-semibold mt-3 ml-2 flex items-center gap-2"
-                                    >
-                                        <XCircle className="w-4 h-4" />
-                                        {errors[field.id]?.message as string}
-                                    </motion.p>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    </div>
-                ))}
+                                    <AnimatePresence>
+                                        {errors[field.id] && (
+                                            <motion.p
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                className="text-pink-500 text-sm font-semibold mt-3 ml-2 flex items-center gap-2"
+                                            >
+                                                <XCircle className="w-4 h-4" />
+                                                {errors[field.id]?.message as string}
+                                            </motion.p>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+                        );
+                    })}
+                </AnimatePresence>
             </div>
 
             {/* Submit Button */}

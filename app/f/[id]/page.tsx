@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { FormRenderer } from "@/components/FormRenderer";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { XCircle, ArrowLeft, Eye } from "lucide-react";
+import { XCircle, ArrowLeft, Eye, Lock } from "lucide-react";
+import Submission from "@/models/Submission";
+import { cookies } from "next/headers";
 
 async function getForm(id: string) {
     await dbConnect();
@@ -30,19 +32,38 @@ export default async function PublicFormPage({
     const expiryDate = form.settings?.expiryDate;
     const isExpired = expiryDate ? new Date(expiryDate) < new Date() : false;
 
-    if ((!isActive || isExpired) && !isPreview) {
+    // Response Limit Check
+    const responseCount = await Submission.countDocuments({ formId: params.id });
+    const isLimitReached = form.settings?.responseLimit > 0 && responseCount >= form.settings.responseLimit;
+
+    // Single Submission Check
+    const cookieStore = cookies();
+    const hasSubmitted = cookieStore.get(`form_submitted_${params.id}`);
+    const isSingleSubmissionActive = form.settings?.singleSubmission;
+
+    if ((!isActive || isExpired || isLimitReached || (isSingleSubmissionActive && hasSubmitted)) && !isPreview) {
+        let title = "This form is no longer accepting responses";
+        let message = "The creator has temporarily disabled this form.";
+
+        if (isExpired) message = "This form has expired and is no longer available.";
+        else if (isLimitReached) message = "This form has reached its maximum response limit.";
+        else if (isSingleSubmissionActive && hasSubmitted) {
+            title = "Already Submitted";
+            message = "You have already filled out this form.";
+        }
+
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto text-center px-6">
                 <div className="glass p-12 rounded-3xl border border-white/10 space-y-6">
                     <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
-                        <XCircle className="w-10 h-10 text-red-400" />
+                        {isSingleSubmissionActive && hasSubmitted ? (
+                            <Lock className="w-10 h-10 text-purple-400" />
+                        ) : (
+                            <XCircle className="w-10 h-10 text-red-400" />
+                        )}
                     </div>
-                    <h1 className="text-3xl font-bold">This form is no longer accepting responses</h1>
-                    <p className="text-muted-foreground">
-                        {isExpired
-                            ? "This form has expired and is no longer available."
-                            : "The creator has temporarily disabled this form."}
-                    </p>
+                    <h1 className="text-3xl font-bold">{title}</h1>
+                    <p className="text-muted-foreground">{message}</p>
                     <Link href="/">
                         <Button variant="ghost" className="glass border-white/10 gap-2 mt-4 hover:bg-white/5">
                             <ArrowLeft className="w-4 h-4" />
