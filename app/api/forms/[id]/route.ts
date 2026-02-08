@@ -45,3 +45,24 @@ export async function PATCH(
         return NextResponse.json({ error: "Failed to update form" }, { status: 500 });
     }
 }
+
+export async function DELETE(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        await dbConnect();
+        const { id } = params;
+
+        const deletedForm = await Form.findByIdAndDelete(id);
+
+        if (!deletedForm) {
+            return NextResponse.json({ error: "Form not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ message: "Form deleted successfully" });
+    } catch (error: unknown) {
+        console.error("Error deleting form:", error);
+        return NextResponse.json({ error: "Failed to delete form" }, { status: 500 });
+    }
+}

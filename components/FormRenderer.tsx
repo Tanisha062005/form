@@ -400,9 +400,121 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                             )}
                                         />
                                     ) : field.type === 'file' ? (
-                                        <div className="w-full p-12 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4 text-muted-foreground hover:border-purple-500/50 hover:bg-purple-500/5 transition-all cursor-pointer">
-                                            <Upload className="w-12 h-12 opacity-30" />
-                                            <span className="text-lg font-semibold">Click to upload file</span>
+                                        <div className="w-full">
+                                            <input
+                                                type="file"
+                                                id={`file-${field.id}`}
+                                                className="hidden"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+
+                                                    setLocationStates(prev => ({
+                                                        ...prev,
+                                                        [field.id]: { loading: true, error: false, mode: 'auto' }
+                                                    }));
+
+                                                    const formData = new FormData();
+                                                    formData.append('file', file);
+
+                                                    try {
+                                                        const res = await fetch('/api/upload', {
+                                                            method: 'POST',
+                                                            body: formData
+                                                        });
+
+                                                        if (!res.ok) throw new Error('Upload failed');
+
+                                                        const data = await res.json();
+
+                                                        // Update form value with the URL
+                                                        const event = {
+                                                            target: {
+                                                                name: field.id,
+                                                                value: data.url
+                                                            }
+                                                        };
+                                                        register(field.id).onChange(event);
+
+                                                        setLocationStates(prev => ({
+                                                            ...prev,
+                                                            [field.id]: {
+                                                                loading: false,
+                                                                error: false,
+                                                                mode: 'auto',
+                                                                data: {
+                                                                    address: file.name, // Reusing address field for filename
+                                                                    method: 'auto',
+                                                                    timestamp: new Date()
+                                                                }
+                                                            }
+                                                        }));
+                                                        toast.success("File uploaded successfully");
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: true } }));
+                                                        toast.error("File upload failed");
+                                                    }
+                                                }}
+                                            />
+
+                                            {/* Upload UI State Management using existing locationStates structure for simplicity */}
+                                            {locationStates[field.id]?.loading ? (
+                                                <div className="w-full p-8 border border-purple-500/30 bg-purple-500/5 rounded-3xl flex flex-col items-center justify-center gap-4">
+                                                    <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+                                                    <div className="text-center">
+                                                        <p className="text-purple-300 font-medium">Uploading your file...</p>
+                                                        <p className="text-xs text-purple-400/60 mt-1">Please wait</p>
+                                                    </div>
+                                                </div>
+                                            ) : locationStates[field.id]?.data?.address ? (
+                                                <div className="w-full p-6 border border-green-500/30 bg-green-500/5 rounded-3xl flex items-center justify-between group/file">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 bg-green-500/20 rounded-xl">
+                                                            <CheckCircle2 className="w-6 h-6 text-green-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-white text-lg truncate max-w-[200px] sm:max-w-xs">{locationStates[field.id].data?.address}</p>
+                                                            <p className="text-xs text-green-400/60 font-mono">Upload Complete</p>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            const fileInput = document.getElementById(`file-${field.id}`) as HTMLInputElement;
+                                                            if (fileInput) fileInput.value = '';
+
+                                                            setLocationStates(prev => {
+                                                                const newState = { ...prev };
+                                                                delete newState[field.id];
+                                                                return newState;
+                                                            });
+
+                                                            // Clear form value
+                                                            register(field.id).onChange({ target: { name: field.id, value: '' } });
+                                                        }}
+                                                        className="opacity-0 group-hover/file:opacity-100 transition-opacity text-white/40 hover:text-white"
+                                                    >
+                                                        Remove
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <label
+                                                    htmlFor={`file-${field.id}`}
+                                                    className="w-full p-12 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center gap-4 text-muted-foreground hover:border-purple-500/50 hover:bg-purple-500/5 hover:text-white transition-all cursor-pointer group/upload"
+                                                >
+                                                    <div className="p-4 bg-white/5 rounded-2xl group-hover/upload:scale-110 transition-transform duration-300 group-hover/upload:bg-purple-500/20">
+                                                        <Upload className="w-8 h-8 opacity-50 group-hover/upload:opacity-100 group-hover/upload:text-purple-400 transition-all" />
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <span className="text-lg font-semibold block">Click to upload file</span>
+                                                        <span className="text-sm opacity-50">Max size 10MB</span>
+                                                    </div>
+                                                </label>
+                                            )}
                                         </div>
                                     ) : field.type === 'location' ? (
                                         <div className="space-y-4">

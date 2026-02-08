@@ -33,6 +33,23 @@ import {
     MapPin,
     Navigation,
 } from 'lucide-react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragOverlay,
+    defaultDropAnimationSideEffects
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableField } from '@/components/SortableField';
 import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -107,6 +124,35 @@ export default function BuilderPage() {
         singleSubmission: false,
         closedMessage: "This form is no longer accepting responses.",
     });
+    const [activeId, setActiveId] = useState<string | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragStart = (event: any) => {
+        setActiveId(event.active.id);
+    };
+
+    const handleDragEnd = (event: any) => {
+        const { active, over } = event;
+
+        if (active.id !== over?.id) {
+            setFields((items) => {
+                const oldIndex = items.findIndex((item) => item.id === active.id);
+                const newIndex = items.findIndex((item) => item.id === over.id);
+                return arrayMove(items, oldIndex, newIndex);
+            });
+        }
+        setActiveId(null);
+    };
 
     // Fetch initial data
     useEffect(() => {
@@ -221,14 +267,6 @@ export default function BuilderPage() {
         if (selectedFieldId === fieldId) setSelectedFieldId(null);
     };
 
-    const moveField = (index: number, direction: 'up' | 'down') => {
-        const newFields = [...fields];
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        if (targetIndex < 0 || targetIndex >= newFields.length) return;
-
-        [newFields[index], newFields[targetIndex]] = [newFields[targetIndex], newFields[index]];
-        setFields(newFields);
-    };
 
     const selectedField = fields.find(f => f.id === selectedFieldId);
 
@@ -310,71 +348,52 @@ export default function BuilderPage() {
                 <div className="flex-1 flex flex-col min-h-0">
                     <ScrollArea className="flex-1 glass rounded-3xl border-white/5">
                         <div className="p-8 max-w-3xl mx-auto space-y-6">
-                            {fields.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-32 text-center text-muted-foreground border-2 border-dashed border-white/10 rounded-3xl">
-                                    <Plus className="w-12 h-12 mb-4 opacity-20" />
-                                    <p className="text-lg">Drag or click components to start building</p>
-                                </div>
-                            ) : (
-                                fields.map((field, index) => (
-                                    <div
-                                        key={field.id}
-                                        onClick={() => setSelectedFieldId(field.id)}
-                                        className={`relative p-8 glass rounded-2xl border-white/10 cursor-pointer transition-all ${selectedFieldId === field.id ? 'ring-2 ring-purple-500 bg-white/10' : 'hover:border-white/20'}`}
-                                    >
-                                        <div className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-purple-500 to-indigo-600 rounded-l-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                                        <div className="flex justify-between items-start mb-4">
-                                            <div className="space-y-1">
-                                                <Label className="text-lg font-bold">
-                                                    {field.label} {field.required && <span className="text-red-500">*</span>}
-                                                </Label>
-                                                {field.helpText && <p className="text-sm text-muted-foreground italic">{field.helpText}</p>}
-                                            </div>
-
-                                            {selectedFieldId === field.id && (
-                                                <div className="flex items-center gap-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={(e) => { e.stopPropagation(); moveField(index, 'up'); }}
-                                                        disabled={index === 0}
-                                                        className="h-8 w-8 text-muted-foreground hover:text-white"
-                                                    >
-                                                        <ArrowUp className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={(e) => { e.stopPropagation(); moveField(index, 'down'); }}
-                                                        disabled={index === fields.length - 1}
-                                                        className="h-8 w-8 text-muted-foreground hover:text-white"
-                                                    >
-                                                        <ArrowDown className="w-4 h-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={(e) => { e.stopPropagation(); deleteField(field.id); }}
-                                                        className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-                                            )}
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCenter}
+                                onDragStart={handleDragStart}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={fields.map(f => f.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    {fields.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-32 text-center text-muted-foreground border-2 border-dashed border-white/10 rounded-3xl">
+                                            <Plus className="w-12 h-12 mb-4 opacity-20" />
+                                            <p className="text-lg">Drag or click components to start building</p>
                                         </div>
-
-                                        {/* Field Content Visualization */}
-                                        <div className="relative">
-                                            <FieldRenderer
+                                    ) : (
+                                        fields.map((field) => (
+                                            <SortableField
+                                                key={field.id}
                                                 field={field}
-                                                selectedDate={previewDates[field.id]}
+                                                isSelected={selectedFieldId === field.id}
+                                                onClick={() => setSelectedFieldId(field.id)}
+                                                onDelete={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteField(field.id);
+                                                }}
+                                                previewDate={previewDates[field.id]}
                                                 onDateChange={(date) => setPreviewDates(prev => ({ ...prev, [field.id]: date }))}
                                             />
+                                        ))
+                                    )}
+                                </SortableContext>
+                                <DragOverlay>
+                                    {activeId ? (
+                                        <div className="opacity-80 rotate-2 scale-105">
+                                            <SortableField
+                                                field={fields.find(f => f.id === activeId)!}
+                                                isSelected={true}
+                                                onClick={() => { }}
+                                                onDelete={() => { }}
+                                                onDateChange={() => { }}
+                                            />
                                         </div>
-                                    </div>
-                                ))
-                            )}
+                                    ) : null}
+                                </DragOverlay>
+                            </DndContext>
                         </div>
                     </ScrollArea>
                 </div>

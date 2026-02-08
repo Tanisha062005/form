@@ -16,6 +16,7 @@ import Form from '@/models/Form';
 import Submission from '@/models/Submission';
 import { formatDistanceToNow } from 'date-fns';
 import CreateFormModal from '@/components/CreateFormModal';
+import DeleteFormBtn from '@/components/DeleteFormBtn';
 
 const EmptyState = () => (
     <div className="flex flex-col items-center justify-center py-20 px-6 glass rounded-3xl text-center max-w-2xl mx-auto mt-12 animate-in fade-in zoom-in duration-500">
@@ -129,11 +130,14 @@ export default async function DashboardPage() {
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-start">
                                             <h3 className="text-xl font-bold group-hover:text-purple-400 transition-colors truncate pr-4">{form.title}</h3>
-                                            <Link href={`/builder/${form._id}`}>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </Link>
+                                            <div className="flex items-center gap-2">
+                                                <Link href={`/builder/${form._id}`}>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
+                                                        <MoreVertical className="w-4 h-4" />
+                                                    </Button>
+                                                </Link>
+                                                <DeleteFormBtn id={form._id} />
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3">
                                             <Badge className={`${statusColor} border`}>
