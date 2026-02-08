@@ -34,7 +34,7 @@ export default async function PublicFormPage({
 
     // Response Limit Check
     const responseCount = await Submission.countDocuments({ formId: params.id });
-    const isLimitReached = form.settings?.responseLimit > 0 && responseCount >= form.settings.responseLimit;
+    const isLimitReached = (form.settings?.maxResponses || 0) > 0 && responseCount >= form.settings.maxResponses;
 
     // Single Submission Check
     const cookieStore = cookies();
@@ -42,14 +42,18 @@ export default async function PublicFormPage({
     const isSingleSubmissionActive = form.settings?.singleSubmission;
 
     if ((!isActive || isExpired || isLimitReached || (isSingleSubmissionActive && hasSubmitted)) && !isPreview) {
-        let title = "This form is no longer accepting responses";
-        let message = "The creator has temporarily disabled this form.";
+        let title = "Form Unavailable";
+        let message = form.settings?.closedMessage || "This form is no longer accepting responses.";
 
-        if (isExpired) message = "This form has expired and is no longer available.";
-        else if (isLimitReached) message = "This form has reached its maximum response limit.";
-        else if (isSingleSubmissionActive && hasSubmitted) {
+        if (isSingleSubmissionActive && hasSubmitted) {
             title = "Already Submitted";
             message = "You have already filled out this form.";
+        } else if (isExpired) {
+            title = "Form Expired";
+        } else if (isLimitReached) {
+            title = "Limit Reached";
+        } else if (!isActive) {
+            title = "Form Deactivated";
         }
 
         return (

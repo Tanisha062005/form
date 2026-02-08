@@ -105,41 +105,63 @@ export default async function DashboardPage() {
 
                 {hasForms ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {formsWithCounts.map((form) => (
-                            <div key={form._id} className="glass-card p-6 flex flex-col justify-between min-h-[200px] group">
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-start">
-                                        <h3 className="text-xl font-bold group-hover:text-purple-400 transition-colors truncate pr-4">{form.title}</h3>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                                            <MoreVertical className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Badge className={(form.settings?.isActive ?? true) ? 'bg-green-500/20 text-green-400 border-green-500/20' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/20'}>
-                                            {(form.settings?.isActive ?? true) ? 'Live' : 'Closed'}
-                                        </Badge>
-                                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                                            <Clock className="w-3 h-3" />
-                                            {form.updatedAt && !isNaN(new Date(form.updatedAt).getTime())
-                                                ? formatDistanceToNow(new Date(form.updatedAt), { addSuffix: true })
-                                                : "Recently updated"}
-                                        </span>
-                                    </div>
-                                </div>
+                        {formsWithCounts.map((form) => {
+                            const isActive = form.settings?.isActive ?? true;
+                            const isExpired = form.settings?.expiryDate ? new Date(form.settings.expiryDate) < new Date() : false;
+                            const isLimitReached = (form.settings?.maxResponses || 0) > 0 && form.responses >= form.settings.maxResponses;
 
-                                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-2xl font-bold">{form.responses}</p>
-                                        <p className="text-xs text-muted-foreground uppercase tracking-wider">Responses</p>
+                            let status = 'Live';
+                            let statusColor = 'bg-green-500/20 text-green-400 border-green-500/20';
+
+                            if (!isActive) {
+                                status = 'Inactive';
+                                statusColor = 'bg-gray-500/20 text-gray-400 border-gray-500/20';
+                            } else if (isExpired) {
+                                status = 'Expired';
+                                statusColor = 'bg-red-500/20 text-red-400 border-red-500/20';
+                            } else if (isLimitReached) {
+                                status = 'Limit Reached';
+                                statusColor = 'bg-orange-500/20 text-orange-400 border-orange-500/20';
+                            }
+
+                            return (
+                                <div key={form._id} className="glass-card p-6 flex flex-col justify-between min-h-[200px] group">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <h3 className="text-xl font-bold group-hover:text-purple-400 transition-colors truncate pr-4">{form.title}</h3>
+                                            <Link href={`/builder/${form._id}`}>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-white">
+                                                    <MoreVertical className="w-4 h-4" />
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Badge className={`${statusColor} border`}>
+                                                {status}
+                                            </Badge>
+                                            <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                                <Clock className="w-3 h-3" />
+                                                {form.updatedAt && !isNaN(new Date(form.updatedAt).getTime())
+                                                    ? formatDistanceToNow(new Date(form.updatedAt), { addSuffix: true })
+                                                    : "Recently updated"}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <Link href={`/dashboard/responses/${form._id}`}>
-                                        <Button className="glass bg-white/10 hover:bg-white/20 text-white text-xs px-4 py-2 rounded-xl transition-all">
-                                            View Results
-                                        </Button>
-                                    </Link>
+
+                                    <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-2xl font-bold">{form.responses}</p>
+                                            <p className="text-xs text-muted-foreground uppercase tracking-wider">Responses</p>
+                                        </div>
+                                        <Link href={`/dashboard/responses/${form._id}`}>
+                                            <Button className="glass bg-white/10 hover:bg-white/20 text-white text-xs px-4 py-2 rounded-xl transition-all">
+                                                View Results
+                                            </Button>
+                                        </Link>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 ) : (
                     <EmptyState />

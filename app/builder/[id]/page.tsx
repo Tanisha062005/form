@@ -82,7 +82,7 @@ const componentList = [
     { type: 'checkbox', label: 'Checkbox', icon: CheckSquare },
     { type: 'date', label: 'Date Picker', icon: Calendar },
     { type: 'file', label: 'File Upload', icon: Upload },
-    { type: 'location', label: 'Location Pin', icon: MapPin },
+    { type: 'location', label: 'Location Sensor', icon: MapPin },
 ];
 
 export default function BuilderPage() {
@@ -102,9 +102,10 @@ export default function BuilderPage() {
     const [isCopied, setIsCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'content' | 'logic' | 'validation'>('content');
     const [formSettings, setFormSettings] = useState({
-        responseLimit: 0,
+        maxResponses: 0,
         expiryDate: null as Date | null,
         singleSubmission: false,
+        closedMessage: "This form is no longer accepting responses.",
     });
 
     // Fetch initial data
@@ -118,9 +119,10 @@ export default function BuilderPage() {
                 setFields(data.fields || []);
                 if (data.settings) {
                     setFormSettings({
-                        responseLimit: data.settings.responseLimit || 0,
+                        maxResponses: data.settings.maxResponses || 0,
                         expiryDate: data.settings.expiryDate ? new Date(data.settings.expiryDate) : null,
                         singleSubmission: !!data.settings.singleSubmission,
+                        closedMessage: data.settings.closedMessage || "This form is no longer accepting responses.",
                     });
                 }
             } catch {
@@ -198,7 +200,7 @@ export default function BuilderPage() {
         const newField: FormField = {
             id: nanoid(),
             type,
-            label: `New ${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
+            label: type === 'location' ? 'Current Location' : `New ${type.charAt(0).toUpperCase() + type.slice(1)} Field`,
             placeholder: '',
             helpText: '',
             required: false,
@@ -705,45 +707,56 @@ export default function BuilderPage() {
                     </div>
 
                     <div className="p-8 space-y-8">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <Label className="text-sm font-semibold">Response Limit</Label>
-                                    <p className="text-xs text-muted-foreground italic">Stop after X submissions (0 for unlimited)</p>
-                                </div>
-                                <Input
-                                    type="number"
-                                    className="w-20 bg-white/5 border-white/10 h-8 text-center"
-                                    value={formSettings.responseLimit}
-                                    onChange={(e) => setFormSettings({ ...formSettings, responseLimit: parseInt(e.target.value) || 0 })}
-                                />
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="space-y-1">
+                                <Label className="text-sm font-semibold">Max Responses</Label>
+                                <p className="text-xs text-muted-foreground italic">Stop after X submissions (0 for unlimited)</p>
                             </div>
+                            <Input
+                                type="number"
+                                className="w-24 bg-black/20 border-white/10 h-10 text-center rounded-xl"
+                                value={formSettings.maxResponses}
+                                onChange={(e) => setFormSettings({ ...formSettings, maxResponses: parseInt(e.target.value) || 0 })}
+                            />
+                        </div>
 
-                            <div className="flex items-center justify-between">
-                                <div className="space-y-1">
-                                    <Label className="text-sm font-semibold">Expiry Date</Label>
-                                    <p className="text-xs text-muted-foreground italic">Scheduled form closure</p>
-                                </div>
-                                <Input
-                                    type="date"
-                                    className="w-40 bg-white/5 border-white/10 h-8 text-sm"
-                                    value={formSettings.expiryDate ? formSettings.expiryDate.toISOString().split('T')[0] : ""}
-                                    onChange={(e) => setFormSettings({ ...formSettings, expiryDate: e.target.value ? new Date(e.target.value) : null })}
-                                />
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="space-y-1">
+                                <Label className="text-sm font-semibold">Expiry Date</Label>
+                                <p className="text-xs text-muted-foreground italic">Scheduled form closure</p>
                             </div>
+                            <Input
+                                type="date"
+                                className="w-40 bg-black/20 border-white/10 h-10 text-sm rounded-xl"
+                                value={formSettings.expiryDate ? formSettings.expiryDate.toISOString().split('T')[0] : ""}
+                                onChange={(e) => setFormSettings({ ...formSettings, expiryDate: e.target.value ? new Date(e.target.value) : null })}
+                            />
+                        </div>
 
-                            <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
-                                <div className="space-y-1">
-                                    <Label className="text-sm font-semibold">Single Submission</Label>
-                                    <p className="text-xs text-muted-foreground italic">Prevent multiple entries</p>
-                                </div>
-                                <input
-                                    type="checkbox"
-                                    checked={formSettings.singleSubmission}
-                                    onChange={(e) => setFormSettings({ ...formSettings, singleSubmission: e.target.checked })}
-                                    className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
-                                />
+                        <div className="space-y-2 p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="space-y-1 mb-2">
+                                <Label className="text-sm font-semibold">Closed Message</Label>
+                                <p className="text-xs text-muted-foreground italic">Message shown when form is inactive</p>
                             </div>
+                            <Textarea
+                                value={formSettings.closedMessage}
+                                onChange={(e) => setFormSettings({ ...formSettings, closedMessage: e.target.value })}
+                                className="bg-black/20 border-white/10 min-h-[80px] rounded-xl resize-none"
+                                placeholder="This form is no longer accepting responses."
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                            <div className="space-y-1">
+                                <Label className="text-sm font-semibold">Single Submission</Label>
+                                <p className="text-xs text-muted-foreground italic">Prevent multiple entries from same user</p>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={formSettings.singleSubmission}
+                                onChange={(e) => setFormSettings({ ...formSettings, singleSubmission: e.target.checked })}
+                                className="h-5 w-5 rounded border-white/10 bg-black/20 text-purple-500 focus:ring-purple-500"
+                            />
                         </div>
 
                         <Button

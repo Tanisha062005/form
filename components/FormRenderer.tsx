@@ -65,7 +65,18 @@ interface FormRendererProps {
 export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     const router = useRouter();
     const [submitting, setSubmitting] = useState(false);
-    const [locationStates, setLocationStates] = useState<Record<string, { loading: boolean, error: boolean, data?: { lat: number, lng: number, city?: string } }>>({});
+    const [locationStates, setLocationStates] = useState<Record<string, {
+        loading: boolean,
+        error: boolean,
+        mode?: 'auto' | 'manual',
+        data?: {
+            address: string,
+            lat?: number,
+            lng?: number,
+            method: 'auto' | 'manual',
+            timestamp: Date
+        }
+    }>>({});
     const device = useDeviceType();
 
     // Dynamic Glass Styles based on Device
@@ -154,8 +165,8 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
     const values = watch();
 
-    const getLocation = (fieldId: string, captureCity: boolean) => {
-        setLocationStates(prev => ({ ...prev, [fieldId]: { loading: true, error: false } }));
+    const getLocation = (fieldId: string) => {
+        setLocationStates(prev => ({ ...prev, [fieldId]: { loading: true, error: false, mode: 'auto' } }));
 
         if (!navigator.geolocation) {
             setLocationStates(prev => ({ ...prev, [fieldId]: { loading: false, error: true } }));
@@ -166,16 +177,14 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
-                let city = undefined;
+                let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
-                if (captureCity) {
-                    try {
-                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-                        const data = await res.json();
-                        city = data.address?.city || data.address?.town || data.address?.village || "Unknown Location";
-                    } catch (e) {
-                        console.error("Failed to fetch city", e);
-                    }
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+                    const data = await res.json();
+                    address = data.display_name || address;
+                } catch (e) {
+                    console.error("Failed to fetch address", e);
                 }
 
                 setLocationStates(prev => ({
@@ -183,13 +192,16 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                     [fieldId]: {
                         loading: false,
                         error: false,
-                        data: { lat: latitude, lng: longitude, city }
+                        mode: 'auto',
+                        data: {
+                            address,
+                            lat: latitude,
+                            lng: longitude,
+                            method: 'auto',
+                            timestamp: new Date()
+                        }
                     }
                 }));
-
-                // Update form value for validation if needed, though location is handled somewhat separately
-                // Ideally we sync this with react-hook-form if it's required
-                // For now we just store state to submit alongside
             },
             (error) => {
                 console.error("Error getting location", error);
@@ -225,18 +237,21 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    answers: data,
-                    locationData: Object.keys(locationStates).reduce((acc: any, key) => {
-                        if (locationStates[key]?.data) {
-                            acc = {
-                                latitude: locationStates[key].data?.lat,
-                                longitude: locationStates[key].data?.lng,
-                                city: locationStates[key].data?.city,
-                                timestamp: new Date()
-                            };
-                        }
-                        return acc;
-                    }, undefined)
+                    answers: {
+                        ...data,
+                        ...Object.keys(locationStates).reduce((acc: any, key) => {
+                            if (locationStates[key]?.data) {
+                                acc[key] = {
+                                    address: locationStates[key].data?.address,
+                                    latitude: locationStates[key].data?.lat,
+                                    longitude: locationStates[key].data?.lng,
+                                    method: locationStates[key].data?.method,
+                                    timestamp: locationStates[key].data?.timestamp
+                                };
+                            }
+                            return acc;
+                        }, {})
+                    }
                 }),
             });
 
@@ -391,59 +406,129 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                         </div>
                                     ) : field.type === 'location' ? (
                                         <div className="space-y-4">
-                                            {locationStates[field.id]?.error ? (
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center gap-2 text-red-400 mb-2">
-                                                        <XCircle className="w-4 h-4" />
-                                                        <span className="text-sm font-medium">Location access denied. Please enter manually.</span>
+                                            {/* Success State - Show Chip */}
+                                            {locationStates[field.id]?.data?.address ? (
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.9 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    className="flex items-center gap-3 p-4 rounded-xl glass bg-purple-500/10 border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+                                                >
+                                                    <div className="p-2 rounded-full bg-purple-500/20">
+                                                        <MapPin className="w-5 h-5 text-purple-400" />
                                                     </div>
-                                                    <Input
-                                                        {...register(field.id)}
-                                                        placeholder="Enter your location manually..."
-                                                        className="glass-input h-14 text-lg rounded-2xl transition-all focus:ring-2 focus:ring-purple-500/20"
-                                                    />
-                                                </div>
-                                            ) : locationStates[field.id]?.data ? (
-                                                <div className="flex items-center gap-3 p-4 rounded-2xl glass bg-white/10 border border-white/20">
-                                                    <div className="p-3 rounded-full bg-green-500/20">
-                                                        <MapPin className="w-6 h-6 text-green-400" />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="font-bold text-lg text-white">
-                                                            {locationStates[field.id].data?.city || "Location Pinned"}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-bold text-white text-base truncate">
+                                                            {locationStates[field.id].data?.address}
                                                         </p>
-                                                        <p className="text-xs text-muted-foreground font-mono">
-                                                            {locationStates[field.id].data?.lat.toFixed(4)}, {locationStates[field.id].data?.lng.toFixed(4)}
+                                                        <p className="text-xs text-purple-300/70 font-mono">
+                                                            {locationStates[field.id].data?.method === 'auto' ? 'Auto-Detected via GPS' : 'Manually Entered'}
                                                         </p>
                                                     </div>
                                                     <Button
                                                         type="button"
                                                         variant="ghost"
-                                                        onClick={() => setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: false, data: undefined } }))} // Reset
-                                                        className="text-white/50 hover:text-white"
+                                                        size="sm"
+                                                        onClick={() => setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: false, data: undefined, mode: undefined } }))}
+                                                        className="text-white/40 hover:text-white hover:bg-white/10"
                                                     >
-                                                        Retry
+                                                        Edit
                                                     </Button>
-                                                </div>
+                                                </motion.div>
                                             ) : (
-                                                <Button
-                                                    type="button"
-                                                    disabled={locationStates[field.id]?.loading}
-                                                    onClick={() => getLocation(field.id, field.validation?.captureCity || false)}
-                                                    className={`w-full h-16 rounded-2xl border border-white/20 hover:bg-white/10 transition-all font-bold text-lg gap-3 ${locationStates[field.id]?.loading ? 'bg-white/5' : 'glass bg-white/5 backdrop-blur-md'}`}
-                                                >
-                                                    {locationStates[field.id]?.loading ? (
-                                                        <>
-                                                            <Loader2 className="w-5 h-5 animate-spin text-purple-400" />
-                                                            <span className="animate-pulse text-purple-300">Sensing coordinates...</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Navigation className="w-5 h-5 text-purple-400 group-hover:scale-110 transition-transform" />
-                                                            Share Current Location
-                                                        </>
+                                                <div className="space-y-3">
+                                                    {/* Mode Selection or Input */}
+                                                    {!locationStates[field.id]?.mode ? (
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                            <Button
+                                                                type="button"
+                                                                onClick={() => getLocation(field.id)}
+                                                                className="h-14 glass bg-white/5 hover:bg-purple-500/20 border-white/10 hover:border-purple-500/50 rounded-xl gap-2 transition-all group"
+                                                            >
+                                                                <Navigation className="w-4 h-4 text-purple-400 group-hover:scale-110 transition-transform" />
+                                                                <span className="font-semibold">Auto-Detect</span>
+                                                            </Button>
+                                                            <Button
+                                                                type="button"
+                                                                onClick={() => setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: false, mode: 'manual' } }))}
+                                                                className="h-14 glass bg-white/5 hover:bg-white/10 border-white/10 rounded-xl gap-2 transition-all text-white/70 hover:text-white"
+                                                            >
+                                                                <MapPin className="w-4 h-4" />
+                                                                <span className="font-semibold">Enter Manually</span>
+                                                            </Button>
+                                                        </div>
+                                                    ) : locationStates[field.id]?.mode === 'manual' ? (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            className="flex gap-2"
+                                                        >
+                                                            <Input
+                                                                autoFocus
+                                                                placeholder="Type your full address..."
+                                                                className="glass-input h-14 text-lg rounded-xl flex-1 bg-white/5 border-white/20 focus:ring-purple-500/30"
+                                                                onBlur={(e) => {
+                                                                    if (e.target.value.trim()) {
+                                                                        setLocationStates(prev => ({
+                                                                            ...prev,
+                                                                            [field.id]: {
+                                                                                loading: false,
+                                                                                error: false,
+                                                                                mode: 'manual',
+                                                                                data: {
+                                                                                    address: e.target.value,
+                                                                                    method: 'manual',
+                                                                                    timestamp: new Date()
+                                                                                }
+                                                                            }
+                                                                        }));
+                                                                    }
+                                                                }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.preventDefault();
+                                                                        e.currentTarget.blur();
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                onClick={() => setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: false, mode: undefined } }))}
+                                                                className="h-14 px-4 rounded-xl border border-white/10 hover:bg-white/10"
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                        </motion.div>
+                                                    ) : null}
+
+                                                    {/* Loading State */}
+                                                    {locationStates[field.id]?.loading && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            className="flex items-center justify-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 text-purple-300"
+                                                        >
+                                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                                            <span className="animate-pulse font-medium">Connecting to satellites...</span>
+                                                        </motion.div>
                                                     )}
-                                                </Button>
+
+                                                    {/* Error State */}
+                                                    {locationStates[field.id]?.error && (
+                                                        <div className="flex items-center justify-between p-4 rounded-xl bg-red-500/10 border border-red-500/20">
+                                                            <span className="text-red-300 text-sm font-medium">Location access denied or failed.</span>
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => setLocationStates(prev => ({ ...prev, [field.id]: { loading: false, error: false, mode: 'manual' } }))}
+                                                                className="h-8 text-white/50 hover:text-white"
+                                                            >
+                                                                Try Manual
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     ) : null}

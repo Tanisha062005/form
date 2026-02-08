@@ -21,9 +21,18 @@ export async function POST(
         const isActive = form.settings?.isActive ?? true;
         const expiryDate = form.settings?.expiryDate;
         const isExpired = expiryDate ? new Date(expiryDate) < new Date() : false;
+        const closedMessage = form.settings?.closedMessage || "This form is no longer accepting responses.";
 
         if (!isActive || isExpired) {
-            return NextResponse.json({ error: 'Form is no longer accepting responses' }, { status: 403 });
+            return NextResponse.json({ error: closedMessage }, { status: 403 });
+        }
+
+        // Check Response Limit
+        if (form.settings?.maxResponses) {
+            const currentCount = await Submission.countDocuments({ formId: id });
+            if (currentCount >= form.settings.maxResponses) {
+                return NextResponse.json({ error: closedMessage }, { status: 403 });
+            }
         }
 
         // 2. Save the response object into the Submissions collection

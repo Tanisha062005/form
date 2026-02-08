@@ -22,10 +22,11 @@ const FormSchema = new Schema({
     creatorId: { type: String, required: true },
     fields: [FieldSchema],
     settings: {
-        expiryDate: { type: Date },
-        responseLimit: { type: Number },
+        maxResponses: { type: Number, default: null },
+        expiryDate: { type: Date, default: null },
         singleSubmission: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
+        closedMessage: { type: String, default: "This form is no longer accepting responses." },
     },
     folder: { type: String, default: 'General' },
 }, { timestamps: true });
