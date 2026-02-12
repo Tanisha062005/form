@@ -45,6 +45,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
+import { motion } from 'framer-motion';
 import { SortableField } from '@/components/SortableField';
 import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,10 @@ export default function BuilderPage() {
         expiryDate: null as Date | null,
         singleSubmission: false,
         closedMessage: "This form is no longer accepting responses.",
+        status: 'Draft' as 'Draft' | 'Live' | 'Closed',
+        visibility: 'Public' as 'Public' | 'Private' | 'Password Protected',
+        password: "",
+        folderName: "Uncategorized",
     });
     const [activeId, setActiveId] = useState<string | null>(null);
 
@@ -164,6 +169,10 @@ export default function BuilderPage() {
                         expiryDate: data.settings.expiryDate ? new Date(data.settings.expiryDate) : null,
                         singleSubmission: !!data.settings.singleSubmission,
                         closedMessage: data.settings.closedMessage || "This form is no longer accepting responses.",
+                        status: data.settings.status || 'Draft',
+                        visibility: data.settings.visibility || 'Public',
+                        password: data.settings.password || "",
+                        folderName: data.folderName || "Uncategorized",
                     });
                 }
             } catch {
@@ -190,7 +199,14 @@ export default function BuilderPage() {
                 await fetch(`/api/forms/${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fields, settings: formSettings }),
+                    body: JSON.stringify({
+                        fields,
+                        settings: {
+                            ...formSettings,
+                            // Ensure folderName is outside settings in the model if we follow the model precisely
+                        },
+                        folderName: formSettings.folderName
+                    }),
                 });
             } catch {
                 console.error("Auto-save failed");
@@ -773,6 +789,66 @@ export default function BuilderPage() {
                             />
                         </div>
 
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-1">Organization & Visibility</p>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-xs font-semibold uppercase tracking-wider text-white/50 ml-1">Folder Name</Label>
+                                    <Input
+                                        value={formSettings.folderName}
+                                        onChange={(e) => setFormSettings({ ...formSettings, folderName: e.target.value })}
+                                        className="bg-white/5 border-white/10 h-12 rounded-xl"
+                                        placeholder="Uncategorized"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-white/50 ml-1">Status</Label>
+                                        <select
+                                            value={formSettings.status}
+                                            onChange={(e) => setFormSettings({ ...formSettings, status: e.target.value as 'Draft' | 'Live' | 'Closed' })}
+                                            className="w-full glass bg-white/5 border-white/10 h-12 rounded-xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-sm"
+                                        >
+                                            <option value="Draft" className="bg-[#030014]">Draft</option>
+                                            <option value="Live" className="bg-[#030014]">Live</option>
+                                            <option value="Closed" className="bg-[#030014]">Closed</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-white/50 ml-1">Visibility</Label>
+                                        <select
+                                            value={formSettings.visibility}
+                                            onChange={(e) => setFormSettings({ ...formSettings, visibility: e.target.value as 'Public' | 'Private' | 'Password Protected' })}
+                                            className="w-full glass bg-white/5 border-white/10 h-12 rounded-xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-sm"
+                                        >
+                                            <option value="Public" className="bg-[#030014]">Public</option>
+                                            <option value="Private" className="bg-[#030014]">Private</option>
+                                            <option value="Password Protected" className="bg-[#030014]">Password Protected</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {formSettings.visibility === 'Password Protected' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-2"
+                                    >
+                                        <Label className="text-xs font-semibold uppercase tracking-wider text-white/50 ml-1">Access Password</Label>
+                                        <Input
+                                            type="text"
+                                            value={formSettings.password}
+                                            onChange={(e) => setFormSettings({ ...formSettings, password: e.target.value })}
+                                            className="bg-white/5 border-white/10 h-12 rounded-xl text-center font-bold tracking-widest"
+                                            placeholder="Set a password..."
+                                        />
+                                    </motion.div>
+                                )}
+                            </div>
+                        </div>
+
                         <Button
                             onClick={() => setIsSettingsModalOpen(false)}
                             className="w-full bg-white/10 hover:bg-white/20 border border-white/10 py-6 rounded-2xl text-lg font-bold transition-all"
@@ -804,7 +880,7 @@ export default function BuilderPage() {
                             <div className="flex gap-2">
                                 <Input
                                     readOnly
-                                    value={window.location.origin + '/f/' + id}
+                                    value={typeof window !== 'undefined' ? window.location.origin + '/f/' + id : ''}
                                     className="glass-input h-14 rounded-2xl font-medium text-purple-200"
                                 />
                                 <Button

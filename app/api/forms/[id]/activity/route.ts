@@ -25,3 +25,25 @@ export async function GET(
         return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
     }
 }
+export async function POST(
+    req: NextRequest,
+    { params }: { params: { id: string } }
+) {
+    try {
+        await dbConnect();
+        const { id } = params;
+        const { eventType, description, metadata } = await req.json();
+
+        const activity = await FormActivity.create({
+            formId: id,
+            eventType,
+            description,
+            metadata
+        });
+
+        return NextResponse.json({ success: true, activity });
+    } catch (err: unknown) {
+        console.error('Error logging activity:', err);
+        return NextResponse.json({ error: 'Failed to log activity' }, { status: 500 });
+    }
+}

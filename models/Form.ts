@@ -27,8 +27,19 @@ const FormSchema = new Schema({
         singleSubmission: { type: Boolean, default: false },
         isActive: { type: Boolean, default: true },
         closedMessage: { type: String, default: "This form is no longer accepting responses." },
+        status: {
+            type: String,
+            enum: ['Draft', 'Live', 'Closed'],
+            default: 'Draft'
+        },
+        visibility: {
+            type: String,
+            enum: ['Public', 'Private', 'Password Protected'],
+            default: 'Public'
+        },
+        password: { type: String, default: "" },
     },
-    folder: { type: String, default: 'General' },
+    folderName: { type: String, default: 'Uncategorized' },
 }, { timestamps: true });
 
 const Form = models.Form || model('Form', FormSchema);

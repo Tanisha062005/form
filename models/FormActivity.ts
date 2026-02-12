@@ -4,7 +4,15 @@ const FormActivitySchema = new Schema({
     formId: { type: Schema.Types.ObjectId, ref: 'Form', required: true, index: true },
     eventType: {
         type: String,
-        enum: ['created', 'status_changed', 'response_received', 'settings_updated'],
+        enum: [
+            'created',
+            'status_changed',
+            'response_received',
+            'settings_updated',
+            'submission_initiated',
+            'submission_undone',
+            'final_submission_saved'
+        ],
         required: true,
     },
     description: { type: String, required: true },

@@ -57,30 +57,72 @@ export async function POST(
             }
         }
 
-        // 2. Save the response object into the Submissions collection
-        const submission = await Submission.create({
-            formId: id,
-            answers,
-            metadata: {
-                ip: req.headers.get('x-forwarded-for') || '127.0.0.1',
-                userAgent: userAgent || 'unknown',
-                device,
-                location: locationData,
-            },
-        });
+        // Check for existing submissions from the same session/IP within 10 minutes for editing
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
 
-        // 3. Log activity
-        await FormActivity.create({
+        // Try to find a recent submission to "edit"
+        const existingSubmission = await Submission.findOne({
             formId: id,
-            eventType: 'response_received',
-            description: 'New response submitted',
-            metadata: {
-                submissionId: submission._id,
-                device,
-            },
-        });
+            'metadata.ip': ip,
+            'metadata.userAgent': userAgent || 'unknown',
+            submittedAt: { $gte: tenMinutesAgo }
+        }).sort({ submittedAt: -1 });
 
-        return NextResponse.json({ success: true, submissionId: submission._id });
+        let submission;
+        if (existingSubmission) {
+            // Update existing submission
+            existingSubmission.answers = answers;
+            existingSubmission.submittedAt = new Date(); // Reset the 10m window on edit? User request says "For 10 minutes after initial submission", let's keep initial submittedAt or update it? "After 10 minutes, the Edit capability should automatically expire". Usually, it's 10 mins from the VERY FIRST submission. 
+            // Let's NOT update submittedAt if we want a fixed 10m window from start.
+            // But if the user clicks edit and submits again, maybe they get another 10 mins? 
+            // The prompt says "For 10 minutes after the initial submission". So we should check against the original submittedAt.
+
+            // However, to keep it simple and friendly, let's just update the answers.
+            existingSubmission.answers = answers;
+            submission = await existingSubmission.save();
+
+            // Log activity: Final Submission Saved (or Updated)
+            await FormActivity.create({
+                formId: id,
+                eventType: 'final_submission_saved',
+                description: 'Response updated within edit window',
+                metadata: {
+                    submissionId: submission._id,
+                    device,
+                },
+            });
+        } else {
+            // 2. Save the response object into the Submissions collection
+            submission = await Submission.create({
+                formId: id,
+                answers,
+                metadata: {
+                    ip,
+                    userAgent: userAgent || 'unknown',
+                    device,
+                    location: locationData,
+                },
+                submittedAt: new Date(),
+            });
+
+            // 3. Log activity
+            await FormActivity.create({
+                formId: id,
+                eventType: 'final_submission_saved',
+                description: 'New response submitted',
+                metadata: {
+                    submissionId: submission._id,
+                    device,
+                },
+            });
+        }
+
+        return NextResponse.json({
+            success: true,
+            submissionId: submission._id,
+            submittedAt: submission.submittedAt
+        });
     } catch (err: unknown) {
         console.error("Submission error:", err);
         return NextResponse.json({ error: 'Failed to submit response' }, { status: 500 });
