@@ -16,7 +16,13 @@ interface ResponseChartProps {
     total: number;
 }
 
-const CustomTooltip = ({ active, payload }: any) => {
+interface CustomTooltipProps {
+    active?: boolean;
+    payload?: { name: string; value: number; payload: Record<string, unknown> }[];
+    label?: string;
+}
+
+const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
         return (
             <div className="glass px-4 py-2 rounded-xl border-white/10 shadow-2xl backdrop-blur-xl">

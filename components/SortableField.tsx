@@ -3,13 +3,13 @@
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { FieldRenderer } from '@/components/FieldRenderer';
+import { FieldRenderer, FormField } from '@/components/FieldRenderer';
 
 interface SortableFieldProps {
-    field: any;
+    field: FormField;
     isSelected: boolean;
     onClick: () => void;
     onDelete: (e: React.MouseEvent) => void;

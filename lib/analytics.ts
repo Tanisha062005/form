@@ -1,5 +1,16 @@
-export const processSubmissions = (fields: any[], submissions: any[]) => {
-    const chartableFields = fields.filter((f: any) =>
+interface Field {
+    id: string;
+    label: string;
+    type: string;
+    options?: string[];
+}
+
+interface Submission {
+    answers: Record<string, unknown>;
+}
+
+export const processSubmissions = (fields: Field[], submissions: Submission[]) => {
+    const chartableFields = fields.filter((f) =>
         ['radio', 'select', 'checkbox'].includes(f.type)
     );
 
@@ -17,11 +28,11 @@ export const processSubmissions = (fields: any[], submissions: any[]) => {
         });
 
         // Calculate total for percentage
-        const total = data.reduce((sum: number, item: any) => sum + item.value, 0);
+        const total = data.reduce((sum: number, item: { value: number }) => sum + item.value, 0);
 
         // Find most selected option
         const sortedData = [...data].sort((a, b) => b.value - a.value);
-        const topOption = sortedData[0];
+        const topOption = sortedData[0] || { name: 'N/A', value: 0 };
         const percentage = total > 0 ? Math.round((topOption.value / total) * 100) : 0;
 
         return {

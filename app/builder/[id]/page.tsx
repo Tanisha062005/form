@@ -5,8 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import {
     Plus,
     Trash2,
-    ArrowUp,
-    ArrowDown,
     Settings,
     Eye,
     Save,
@@ -27,11 +25,8 @@ import {
     Check,
     Zap,
     Shield,
-    MessageSquare,
-
     Globe,
     MapPin,
-    Navigation,
 } from 'lucide-react';
 import {
     DndContext,
@@ -41,7 +36,8 @@ import {
     useSensor,
     useSensors,
     DragOverlay,
-    defaultDropAnimationSideEffects
+    DragEndEvent,
+    DragStartEvent,
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -58,7 +54,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { FieldRenderer } from '@/components/FieldRenderer';
 import {
     Dialog,
     DialogContent,
@@ -137,17 +132,17 @@ export default function BuilderPage() {
         })
     );
 
-    const handleDragStart = (event: any) => {
-        setActiveId(event.active.id);
+    const handleDragStart = (event: DragStartEvent) => {
+        setActiveId(event.active.id as string);
     };
 
-    const handleDragEnd = (event: any) => {
+    const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event;
 
         if (active.id !== over?.id) {
             setFields((items) => {
                 const oldIndex = items.findIndex((item) => item.id === active.id);
-                const newIndex = items.findIndex((item) => item.id === over.id);
+                const newIndex = items.findIndex((item) => item.id === over?.id);
                 return arrayMove(items, oldIndex, newIndex);
             });
         }
@@ -197,8 +192,8 @@ export default function BuilderPage() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ fields, settings: formSettings }),
                 });
-            } catch (error) {
-                console.error("Auto-save failed", error);
+            } catch {
+                console.error("Auto-save failed");
             } finally {
                 setSaving(false);
             }
@@ -219,7 +214,7 @@ export default function BuilderPage() {
             if (!res.ok) throw new Error('Failed to publish form');
 
             setIsPublishModalOpen(true);
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to publish form. Please try again.",

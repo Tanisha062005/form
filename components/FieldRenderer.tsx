@@ -2,21 +2,16 @@
 
 import React from 'react';
 import {
-    Type,
-    Mail,
-    Hash,
     ChevronDown,
     CircleDot,
     CheckSquare,
-    Calendar,
     Upload
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { DatePicker } from '@/components/DatePicker';
 
-interface FormField {
+export interface FormField {
     id: string;
     type: string;
     label: string;

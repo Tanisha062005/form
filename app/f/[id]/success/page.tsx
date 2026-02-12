@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ArrowLeft, Home } from "lucide-react";
+import { CheckCircle2, Home } from "lucide-react";
 
 export default function SuccessPage() {
     return (

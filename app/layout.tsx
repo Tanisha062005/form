@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { Providers } from "@/components/Providers";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -19,8 +21,6 @@ export const metadata: Metadata = {
   description: "High-end alternative to Google Forms with stunning Glassmorphism UI.",
 };
 
-import { Toaster } from "@/components/ui/toaster";
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,11 +31,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
-        <main className="pt-32 pb-12 px-6">
-          {children}
-        </main>
-        <Toaster />
+        <Providers>
+          <Navbar />
+          <main className="pt-32 pb-12 px-6">
+            {children}
+          </main>
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );

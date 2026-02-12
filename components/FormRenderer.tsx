@@ -101,25 +101,28 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
     // Dynamic Zod Schema Generation
     const schema = useMemo(() => {
-        const shape: any = {};
+        const shape: Record<string, z.ZodTypeAny> = {};
         form.fields.forEach(field => {
-            let fieldSchema: any;
+            let fieldSchema: z.ZodTypeAny;
 
             if (field.type === 'email') {
                 fieldSchema = z.string().email("Invalid email format");
             } else if (field.type === 'number') {
-                fieldSchema = z.string().refine((val) => !isNaN(Number(val)), "Must be a number");
+                let numSchema = z.string().refine((val) => !isNaN(Number(val)), "Must be a number");
                 if (field.validation?.exactDigits) {
-                    fieldSchema = fieldSchema.refine((val: string) => val.length === field.validation?.exactDigits, `Must be exactly ${field.validation.exactDigits} digits`);
+                    const digits = field.validation.exactDigits;
+                    numSchema = numSchema.refine((val) => val.length === digits, `Must be exactly ${digits} digits`);
                 }
+                fieldSchema = numSchema;
             } else if (['text', 'textarea', 'select', 'radio'].includes(field.type)) {
-                fieldSchema = z.string();
+                let strSchema = z.string();
                 if (field.validation?.minChars) {
-                    fieldSchema = fieldSchema.min(field.validation.minChars, `Minimum ${field.validation.minChars} characters required`);
+                    strSchema = strSchema.min(field.validation.minChars, `Minimum ${field.validation.minChars} characters required`);
                 }
                 if (field.validation?.maxChars) {
-                    fieldSchema = fieldSchema.max(field.validation.maxChars, `Maximum ${field.validation.maxChars} characters allowed`);
+                    strSchema = strSchema.max(field.validation.maxChars, `Maximum ${field.validation.maxChars} characters allowed`);
                 }
+                fieldSchema = strSchema;
             } else if (field.type === 'checkbox') {
                 fieldSchema = z.array(z.string());
             } else if (field.type === 'date') {
@@ -130,11 +133,11 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
             if (field.required) {
                 if (field.type === 'checkbox') {
-                    fieldSchema = fieldSchema.min(1, "Please select at least one option");
+                    fieldSchema = (fieldSchema as z.ZodArray<z.ZodString>).min(1, "Please select at least one option");
                 } else if (field.type === 'date') {
                     fieldSchema = z.date({ error: "This field is required" }).nullable().refine(val => val !== null, "This field is required");
                 } else {
-                    fieldSchema = fieldSchema.min(1, "This field is required");
+                    fieldSchema = (fieldSchema as z.ZodString).min(1, "This field is required");
                 }
             } else {
                 if (field.type === 'date') {
@@ -157,7 +160,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         formState: { errors },
     } = useForm({
         resolver: zodResolver(schema),
-        defaultValues: form.fields.reduce((acc: any, field) => {
+        defaultValues: form.fields.reduce((acc: Record<string, unknown>, field) => {
             acc[field.id] = field.type === 'checkbox' ? [] : field.type === 'date' ? null : "";
             return acc;
         }, {}),
@@ -226,7 +229,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         return Math.round((completedRequired / requiredFields.length) * 100);
     }, [form.fields, values]);
 
-    const onSubmit = async (data: any) => {
+    const onSubmit = async (data: Record<string, unknown>) => {
         if (isPreview) {
             toast.error("Submissions are disabled in preview mode");
             return;
@@ -239,7 +242,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 body: JSON.stringify({
                     answers: {
                         ...data,
-                        ...Object.keys(locationStates).reduce((acc: any, key) => {
+                        ...Object.keys(locationStates).reduce((acc: Record<string, unknown>, key) => {
                             if (locationStates[key]?.data) {
                                 acc[key] = {
                                     address: locationStates[key].data?.address,
@@ -393,7 +396,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                             control={control}
                                             render={({ field: { value, onChange } }) => (
                                                 <DatePicker
-                                                    date={value}
+                                                    date={(value as Date) || undefined}
                                                     onChange={onChange}
                                                     placeholder={field.placeholder}
                                                 />

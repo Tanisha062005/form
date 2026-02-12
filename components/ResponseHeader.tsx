@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import {
     ArrowLeft,
     Download,
-    Share2,
     Copy,
     Check,
     QrCode,
@@ -26,7 +25,28 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 
-export default function ResponseHeader({ form, submissions }: { form: any, submissions: any[] }) {
+interface Field {
+    id: string;
+    label: string;
+    type: string;
+}
+
+interface Form {
+    _id: string;
+    title: string;
+    settings?: {
+        isActive?: boolean;
+    };
+    fields: Field[];
+}
+
+interface Submission {
+    _id: string;
+    submittedAt: string | Date;
+    answers: Record<string, unknown>;
+}
+
+export default function ResponseHeader({ form, submissions }: { form: Form, submissions: Submission[] }) {
     const router = useRouter();
     const { toast } = useToast();
     const [isActive, setIsActive] = useState(form.settings?.isActive ?? true);
@@ -49,7 +69,7 @@ export default function ResponseHeader({ form, submissions }: { form: any, submi
                 title: "Status Updated",
                 description: `Form is now ${checked ? 'Active' : 'Inactive'}.`,
             });
-        } catch (error) {
+        } catch {
             toast({
                 title: "Error",
                 description: "Failed to update form status.",
@@ -82,17 +102,17 @@ export default function ResponseHeader({ form, submissions }: { form: any, submi
 
         try {
             // Headers
-            const headers = ['Submission ID', 'Submitted At', ...form.fields.map((f: any) => `"${f.label.replace(/"/g, '""')}"`)];
+            const headers = ['Submission ID', 'Submitted At', ...form.fields.map((f: Field) => `"${f.label.replace(/"/g, '""')}"`)];
 
             // Rows
             const rows = submissions.map(sub => {
                 const values = [
                     sub._id,
                     new Date(sub.submittedAt).toLocaleString(),
-                    ...form.fields.map((field: any) => {
+                    ...form.fields.map((field: Field) => {
                         let val = sub.answers[field.id];
                         if (Array.isArray(val)) val = val.join('; ');
-                        return `"${(val ?? '').toString().replace(/"/g, '""')}"`;
+                        return `"${(val as string | number | boolean | null | undefined ?? '').toString().replace(/"/g, '""')}"`;
                     })
                 ];
                 return values.join(',');

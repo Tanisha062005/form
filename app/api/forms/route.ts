@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
+import FormActivity from '@/models/FormActivity';
 
 export async function POST(req: NextRequest) {
     try {
@@ -21,6 +22,16 @@ export async function POST(req: NextRequest) {
             fields: [],
             settings: {
                 isActive: true,
+            },
+        });
+
+        // Log form creation activity
+        await FormActivity.create({
+            formId: newForm._id,
+            eventType: 'created',
+            description: `Form "${title}" created`,
+            metadata: {
+                creatorId,
             },
         });
 

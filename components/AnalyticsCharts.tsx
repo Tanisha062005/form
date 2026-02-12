@@ -5,7 +5,24 @@ import { processSubmissions } from '@/lib/analytics';
 import ResponseChart from './ResponseChart';
 import { TrendingUp, Award, Users } from 'lucide-react';
 
-export default function AnalyticsCharts({ form, submissions }: { form: any, submissions: any[] }) {
+interface Field {
+    id: string;
+    label: string;
+    type: string;
+    options?: string[];
+}
+
+interface Form {
+    fields: Field[];
+}
+
+interface Submission {
+    formId: string;
+    answers: Record<string, string | number | boolean | string[] | Record<string, unknown>>;
+    submittedAt: Date;
+}
+
+export default function AnalyticsCharts({ form, submissions }: { form: Form, submissions: Submission[] }) {
     const stats = processSubmissions(form.fields, submissions);
 
     if (stats.length === 0) {
@@ -31,7 +48,7 @@ export default function AnalyticsCharts({ form, submissions }: { form: any, subm
                         <div className="space-y-1">
                             <h4 className="text-2xl font-black text-white">{stat.summary.percentage}%</h4>
                             <p className="text-[10px] text-white/40 font-medium leading-relaxed">
-                                most select <span className="text-purple-400 font-bold">"{stat.summary.topOption}"</span>
+                                most select <span className="text-purple-400 font-bold">&quot;{stat.summary.topOption}&quot;</span>
                             </p>
                         </div>
                         {/* Progress bar background */}

@@ -6,6 +6,13 @@ const SubmissionSchema = new Schema({
     metadata: {
         ip: { type: String },
         userAgent: { type: String },
+        device: { type: String, enum: ['mobile', 'tablet', 'desktop', 'unknown'], default: 'unknown' },
+        location: {
+            city: { type: String },
+            country: { type: String },
+            latitude: { type: Number },
+            longitude: { type: Number },
+        },
     },
     submittedAt: { type: Date, default: Date.now },
 }, { timestamps: true });

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        const result = await new Promise<any>((resolve, reject) => {
+        const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
             cloudinary.uploader.upload_stream(
                 {
                     folder: "formflow_uploads",
@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
                 },
                 (error, result) => {
                     if (error) reject(error);
-                    else resolve(result);
+                    else if (result) resolve(result);
+                    else reject(new Error('Upload failed'));
                 }
             ).end(buffer);
         });
