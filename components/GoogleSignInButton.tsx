@@ -19,7 +19,7 @@ export default function GoogleSignInButton() {
         setLoading(true);
         try {
             await signIn("google", { callbackUrl: "/dashboard" });
-        } catch (error) {
+        } catch {
             toast.error("Failed to sign in with Google.");
             setLoading(false);
         }

@@ -1,6 +1,3 @@
-C:\Users\tanis\OneDrive\Pictures\Desktop\form\components\FormRenderer.tsx: line 46, col 22, Error - Unexpected any. Specify a different type. (@typescript-eslint/no-explicit-any)
-C:\Users\tanis\OneDrive\Pictures\Desktop\form\components\FormRenderer.tsx: line 48, col 30, Error - Unexpected any. Specify a different type. (@typescript-eslint/no-explicit-any)
-C:\Users\tanis\OneDrive\Pictures\Desktop\form\components\FormRenderer.tsx: line 93, col 49, Error - Unexpected any. Specify a different type. (@typescript-eslint/no-explicit-any)
-C:\Users\tanis\OneDrive\Pictures\Desktop\form\components\FormRenderer.tsx: line 116, col 35, Error - Unexpected any. Specify a different type. (@typescript-eslint/no-explicit-any)
+C:\Users\tanis\OneDrive\Pictures\Desktop\form\components\GoogleSignInButton.tsx: line 22, col 18, Error - 'error' is defined but never used. (@typescript-eslint/no-unused-vars)
 
-4 problems
+1 problem

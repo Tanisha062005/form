@@ -27,6 +27,8 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useOfflineSync } from './providers/OfflineProvider';
 import { saveToQueue } from '@/lib/indexedDbSync';
+import { useFormAutoSave } from '@/hooks/useFormAutoSave';
+import AutoSaveIndicator from './AutoSaveIndicator';
 
 import LockScreen from './LockScreen';
 
@@ -168,6 +170,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         handleSubmit,
         control,
         watch,
+        reset,
         formState: { errors },
     } = useForm({
         resolver: zodResolver(schema),
@@ -178,6 +181,11 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     });
 
     const values = watch();
+    const { lastSaved, clearDraft } = useFormAutoSave({
+        formId: form._id,
+        values,
+        reset,
+    });
 
     const getLocation = (fieldId: string) => {
         setLocationStates(prev => ({ ...prev, [fieldId]: { loading: true, error: false, mode: 'auto' } }));
@@ -309,6 +317,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 document.cookie = `form_submitted_${form._id}=true; max-age=${60 * 60 * 24 * 365}; path=/`;
             }
 
+            clearDraft();
             toast.success('Form submitted successfully!');
             router.push(`/f/${form._id}/success?sid=${result.submissionId}&ts=${result.submittedAt}`);
         } catch (error) {
@@ -320,7 +329,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
             setCountdown(null);
             setPendingData(null);
         }
-    }, [form._id, form.settings?.singleSubmission, locationStates, router, isOffline, updatePendingCount]);
+    }, [form._id, form.settings?.singleSubmission, locationStates, router, isOffline, updatePendingCount, clearDraft]);
 
     React.useEffect(() => {
         let timer: NodeJS.Timeout;
@@ -885,6 +894,8 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                     </span>
                                 </div>
                             </motion.div>
+
+                            <AutoSaveIndicator lastSaved={lastSaved} />
                         </form>
                     )}
                 </motion.div>
