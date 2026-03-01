@@ -25,6 +25,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { DatePicker } from '@/components/DatePicker';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { useOfflineSync } from './providers/OfflineProvider';
+import { saveToQueue } from '@/lib/indexedDbSync';
 
 import LockScreen from './LockScreen';
 
@@ -71,6 +73,7 @@ interface FormRendererProps {
 
 export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     const router = useRouter();
+    const { isOffline, updatePendingCount } = useOfflineSync();
     const [submitting, setSubmitting] = useState(false);
     const [isVerified, setIsVerified] = useState(form.settings?.visibility !== 'Password Protected');
     const [locationStates, setLocationStates] = useState<Record<string, {
@@ -257,26 +260,44 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     const executeSubmit = useCallback(async (data: Record<string, unknown>) => {
         setSubmitting(true);
         try {
+            const payload = {
+                answers: {
+                    ...data,
+                    ...Object.keys(locationStates).reduce((acc: Record<string, unknown>, key) => {
+                        if (locationStates[key]?.data) {
+                            acc[key] = {
+                                address: locationStates[key].data?.address,
+                                latitude: locationStates[key].data?.lat,
+                                longitude: locationStates[key].data?.lng,
+                                method: locationStates[key].data?.method,
+                                timestamp: locationStates[key].data?.timestamp
+                            };
+                        }
+                        return acc;
+                    }, {})
+                }
+            };
+
+            if (isOffline) {
+                await saveToQueue(form._id, payload);
+                await updatePendingCount();
+
+                if (form.settings?.singleSubmission) {
+                    document.cookie = `form_submitted_${form._id}=true; max-age=${60 * 60 * 24 * 365}; path=/`;
+                }
+
+                toast.info("You are offline. Response saved securely and will auto-sync when online.", {
+                    className: "glass bg-indigo-500/10 border-indigo-500/20 text-white backdrop-blur-xl"
+                });
+
+                router.push(`/f/${form._id}/success?offline=true`);
+                return;
+            }
+
             const res = await fetch(`/api/f/${form._id}/submit`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    answers: {
-                        ...data,
-                        ...Object.keys(locationStates).reduce((acc: Record<string, unknown>, key) => {
-                            if (locationStates[key]?.data) {
-                                acc[key] = {
-                                    address: locationStates[key].data?.address,
-                                    latitude: locationStates[key].data?.lat,
-                                    longitude: locationStates[key].data?.lng,
-                                    method: locationStates[key].data?.method,
-                                    timestamp: locationStates[key].data?.timestamp
-                                };
-                            }
-                            return acc;
-                        }, {})
-                    }
-                }),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) throw new Error('Failed to submit form');
@@ -299,7 +320,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
             setCountdown(null);
             setPendingData(null);
         }
-    }, [form._id, form.settings?.singleSubmission, locationStates, router]);
+    }, [form._id, form.settings?.singleSubmission, locationStates, router, isOffline, updatePendingCount]);
 
     React.useEffect(() => {
         let timer: NodeJS.Timeout;

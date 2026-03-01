@@ -20,6 +20,14 @@ const FormSchema = new Schema({
     title: { type: String, required: true },
     description: { type: String },
     creatorId: { type: String, required: true },
+    customSlug: {
+        type: String,
+        unique: true,
+        sparse: true,
+        trim: true,
+        lowercase: true,
+        match: /^[a-z0-9-]+$/
+    },
     fields: [FieldSchema],
     settings: {
         maxResponses: { type: Number, default: null },

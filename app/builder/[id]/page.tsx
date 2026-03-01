@@ -21,8 +21,6 @@ import {
     Loader2,
     CheckCircle2,
     ExternalLink,
-    Copy,
-    Check,
     Zap,
     Shield,
     Globe,
@@ -62,6 +60,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { CustomSlugInput } from "@/components/CustomSlugInput";
 
 // Types
 interface FormField {
@@ -112,7 +111,6 @@ export default function BuilderPage() {
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [publishing, setPublishing] = useState(false);
-    const [isCopied, setIsCopied] = useState(false);
     const [activeTab, setActiveTab] = useState<'content' | 'logic' | 'validation'>('content');
     const [formSettings, setFormSettings] = useState({
         maxResponses: 0,
@@ -124,6 +122,7 @@ export default function BuilderPage() {
         password: "",
         folderName: "Uncategorized",
     });
+    const [customSlug, setCustomSlug] = useState<string>("");
     const [activeId, setActiveId] = useState<string | null>(null);
 
     const sensors = useSensors(
@@ -175,6 +174,13 @@ export default function BuilderPage() {
                         folderName: data.folderName || "Uncategorized",
                     });
                 }
+                if (data.customSlug) {
+                    setCustomSlug(data.customSlug);
+                } else {
+                    // Initialize slug state with the form's ID to start if none exists,
+                    // or leave blank. Leaving blank is better so it prompts them to create one.
+                    setCustomSlug("");
+                }
             } catch {
                 toast({
                     title: "Error",
@@ -205,7 +211,8 @@ export default function BuilderPage() {
                             ...formSettings,
                             // Ensure folderName is outside settings in the model if we follow the model precisely
                         },
-                        folderName: formSettings.folderName
+                        folderName: formSettings.folderName,
+                        customSlug: customSlug || undefined // Only send if it has a value, otherwise undefined so it doesn't overwrite with empty string if we don't want to. Actually, if they clear it we might want to unset it. Let's send it as is.
                     }),
                 });
             } catch {
@@ -216,7 +223,7 @@ export default function BuilderPage() {
         }, 2000); // 2 second debounce
 
         return () => clearTimeout(timeout);
-    }, [fields, formSettings, id, loading]);
+    }, [fields, formSettings, id, loading, customSlug]);
 
     const onPublish = async () => {
         setPublishing(true);
@@ -239,17 +246,6 @@ export default function BuilderPage() {
         } finally {
             setPublishing(false);
         }
-    };
-
-    const copyToClipboard = () => {
-        const url = window.location.origin + '/f/' + id;
-        navigator.clipboard.writeText(url);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-        toast({
-            title: "Copied!",
-            description: "Form link copied to clipboard.",
-        });
     };
 
     // Field Management Functions
@@ -875,26 +871,20 @@ export default function BuilderPage() {
                     </DialogHeader>
 
                     <div className="space-y-6 mt-8">
-                        <div className="space-y-2">
+                        <div className="space-y-4">
                             <Label className="text-xs uppercase tracking-widest font-bold text-purple-400">Public Form Link</Label>
-                            <div className="flex gap-2">
-                                <Input
-                                    readOnly
-                                    value={typeof window !== 'undefined' ? window.location.origin + '/f/' + id : ''}
-                                    className="glass-input h-14 rounded-2xl font-medium text-purple-200"
-                                />
-                                <Button
-                                    onClick={copyToClipboard}
-                                    className="h-14 w-14 glass border-white/10 rounded-2xl flex-shrink-0"
-                                >
-                                    {isCopied ? <Check className="w-5 h-5 text-green-400" /> : <Copy className="w-5 h-5" />}
-                                </Button>
-                            </div>
+
+                            <CustomSlugInput
+                                value={customSlug || (Array.isArray(id) ? id[0] : id)}
+                                onChange={(val: string) => setCustomSlug(val)}
+                                formId={(Array.isArray(id) ? id[0] : id) || undefined}
+                            />
+
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 gap-3 mt-8">
                             <Button
-                                onClick={() => window.open(`/f/${id}`, '_blank')}
+                                onClick={() => window.open(`/f/${customSlug || (Array.isArray(id) ? id[0] : id)}`, '_blank')}
                                 className="h-14 rounded-2xl bg-purple-600 hover:bg-purple-500 font-bold gap-2 text-lg"
                             >
                                 <ExternalLink className="w-5 h-5" />

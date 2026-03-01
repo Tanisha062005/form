@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, Sparkles, ArrowRight } from "lucide-react";
+import GoogleSignInButton from "./GoogleSignInButton";
 
 export default function AuthForm() {
     const [isLogin, setIsLogin] = useState(true);
@@ -110,6 +111,13 @@ export default function AuthForm() {
                                         <ErrorMessage error={error} />
                                         <SubmitButton loading={loading} text="Sign In" />
                                     </form>
+
+                                    <div className="flex items-center gap-3 py-1">
+                                        <div className="h-px w-full bg-white/10" />
+                                        <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-1">OR</span>
+                                        <div className="h-px w-full bg-white/10" />
+                                    </div>
+                                    <GoogleSignInButton />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -155,6 +163,13 @@ export default function AuthForm() {
                                         <ErrorMessage error={error} />
                                         <SubmitButton loading={loading} text="Create Account" />
                                     </form>
+
+                                    <div className="flex items-center gap-3 py-1">
+                                        <div className="h-px w-full bg-white/10" />
+                                        <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-1">OR</span>
+                                        <div className="h-px w-full bg-white/10" />
+                                    </div>
+                                    <GoogleSignInButton />
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -182,6 +197,13 @@ export default function AuthForm() {
                                     <ErrorMessage error={error} />
                                     <SubmitButton loading={loading} text="Sign In" />
                                 </form>
+
+                                <div className="flex items-center gap-3 py-1">
+                                    <div className="h-px w-full bg-white/10" />
+                                    <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-1">OR</span>
+                                    <div className="h-px w-full bg-white/10" />
+                                </div>
+                                <GoogleSignInButton />
                                 <p className="text-center text-xs text-white/30 pt-2">
                                     Don&apos;t have an account?{" "}
                                     <button onClick={toggleMode} className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
@@ -208,6 +230,13 @@ export default function AuthForm() {
                                     <ErrorMessage error={error} />
                                     <SubmitButton loading={loading} text="Create Account" />
                                 </form>
+
+                                <div className="flex items-center gap-3 py-1">
+                                    <div className="h-px w-full bg-white/10" />
+                                    <span className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-1">OR</span>
+                                    <div className="h-px w-full bg-white/10" />
+                                </div>
+                                <GoogleSignInButton />
                                 <p className="text-center text-xs text-white/30 pt-2">
                                     Already have an account?{" "}
                                     <button onClick={toggleMode} className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">

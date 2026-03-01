@@ -8,9 +8,17 @@ import { XCircle, ArrowLeft, Eye, Lock } from "lucide-react";
 import Submission from "@/models/Submission";
 import { cookies } from "next/headers";
 
-async function getForm(id: string) {
+async function getForm(idOrSlug: string) {
     await dbConnect();
-    const form = await Form.findById(id).lean();
+
+    // First try to find by customSlug
+    let form = await Form.findOne({ customSlug: idOrSlug.toLowerCase() }).lean();
+
+    // If not found, and it's a valid ObjectId, try finding by _id
+    if (!form && idOrSlug.length === 24) {  // Basic check for valid MongoDB ObjectId length
+        form = await Form.findById(idOrSlug).lean();
+    }
+
     return form;
 }
 
