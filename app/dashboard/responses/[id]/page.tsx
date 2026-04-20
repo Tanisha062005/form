@@ -33,7 +33,7 @@ export default async function ResponsesPage({ params }: { params: { id: string }
     const formDoc = await Form.findById(params.id).lean();
     if (!formDoc) return notFound();
 
-    if ((formDoc as any).userId !== session.user.id) {
+    if ((formDoc as { userId: string }).userId !== session.user.id) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto text-center px-6 animate-in fade-in zoom-in duration-500">
                 <div className="glass p-12 rounded-3xl border border-red-500/20 bg-red-500/5 space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.1)]">
