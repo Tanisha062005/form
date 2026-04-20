@@ -294,7 +294,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                     document.cookie = `form_submitted_${form._id}=true; max-age=${60 * 60 * 24 * 365}; path=/`;
                 }
 
-                toast.info("You are offline. Response saved securely and will auto-sync when online.", {
+                toast.info("Saved Offline: Response saved securely and will auto-sync when online.", {
                     className: "glass bg-indigo-500/10 border-indigo-500/20 text-white backdrop-blur-xl"
                 });
 
@@ -332,18 +332,36 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
     }, [form._id, form.settings?.singleSubmission, locationStates, router, isOffline, updatePendingCount, clearDraft]);
 
     React.useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if (countdownActive && countdown !== null && countdown > 0) {
-            timer = setTimeout(() => {
-                setCountdown(countdown - 1);
-            }, 1000);
-        } else if (countdownActive && countdown === 0) {
-            if (pendingData) {
-                executeSubmit(pendingData);
-            }
+        let animationFrameId: number;
+        let startTime: number;
+        
+        if (countdownActive) {
+            const duration = 10000; // 10 seconds
+            
+            const tick = (timestamp: number) => {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
+                
+                setCountdown(remaining);
+                
+                if (elapsed < duration) {
+                    animationFrameId = requestAnimationFrame(tick);
+                } else {
+                    setCountdown(0);
+                    if (pendingData) {
+                        executeSubmit(pendingData);
+                    }
+                }
+            };
+            
+            animationFrameId = requestAnimationFrame(tick);
         }
-        return () => clearTimeout(timer);
-    }, [countdown, countdownActive, pendingData, executeSubmit]);
+        
+        return () => {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        };
+    }, [countdownActive, pendingData, executeSubmit]);
 
     const onSubmit = (data: Record<string, unknown>) => {
         if (isPreview) {
@@ -354,6 +372,11 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         // Check for Closed status
         if (form.settings?.status === 'Closed') {
             toast.error("This form is no longer accepting responses");
+            return;
+        }
+
+        if (isOffline) {
+            executeSubmit(data);
             return;
         }
 
@@ -844,7 +867,8 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                                         fill="transparent"
                                                         strokeDasharray="251.2"
                                                         initial={{ strokeDashoffset: 0 }}
-                                                        animate={{ strokeDashoffset: 251.2 - (251.2 * countdown) / 10 }}
+                                                        animate={{ strokeDashoffset: 251.2 }}
+                                                        transition={{ duration: 10, ease: "linear" }}
                                                         className="text-purple-500"
                                                     />
                                                 </svg>

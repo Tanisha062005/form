@@ -19,24 +19,55 @@ export interface FormField {
     helpText?: string;
     required: boolean;
     options?: string[];
-    logic?: unknown;
+    logic?: {
+        triggerFieldId: string;
+        condition: 'equals' | 'not_equals';
+        value: string;
+    };
+    validation?: {
+        minChars?: number;
+        maxChars?: number;
+        exactDigits?: number;
+        captureCity?: boolean;
+    };
+    requireRange?: boolean;
 }
 
 interface FieldRendererProps {
     field: FormField;
     selectedDate?: Date;
     onDateChange?: (date: Date | undefined) => void;
+    updateField?: (id: string, data: Partial<FormField>) => void;
 }
 
-export function FieldRenderer({ field, selectedDate, onDateChange }: FieldRendererProps) {
+export function FieldRenderer({ field, selectedDate, onDateChange, updateField }: FieldRendererProps) {
+    const handlePlaceholderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        if (updateField) updateField(field.id, { placeholder: e.target.value });
+    };
     switch (field.type) {
         case 'text':
         case 'email':
         case 'number':
-            return <Input placeholder={field.placeholder} disabled className="bg-white/5 border-white/10" />;
+            return (
+                <Input 
+                    value={field.placeholder || ""} 
+                    onChange={handlePlaceholderChange}
+                    readOnly={!updateField}
+                    placeholder="Type to set placeholder..." 
+                    className="bg-white/5 border-white/10 text-white/40 focus:text-white/70 transition-colors placeholder:text-white/10 focus:ring-1 focus:ring-purple-500/30" 
+                />
+            );
 
         case 'textarea':
-            return <Textarea placeholder={field.placeholder} disabled className="bg-white/5 border-white/10" />;
+            return (
+                <Textarea 
+                    value={field.placeholder || ""} 
+                    onChange={handlePlaceholderChange}
+                    readOnly={!updateField}
+                    placeholder="Type to set placeholder..." 
+                    className="bg-white/5 border-white/10 text-white/40 focus:text-white/70 transition-colors placeholder:text-white/10 focus:ring-1 focus:ring-purple-500/30 min-h-[80px]" 
+                />
+            );
 
         case 'select':
             return (

@@ -9,14 +9,17 @@ import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
 import Submission from '@/models/Submission';
 import CreateFormModal from '@/components/CreateFormModal';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 const EmptyState = () => (
-    <div className="flex flex-col items-center justify-center py-20 px-6 glass rounded-3xl text-center max-w-2xl mx-auto mt-12 animate-in fade-in zoom-in duration-500">
+    <div className="flex flex-col items-center justify-center py-20 px-6 glass rounded-3xl text-center max-w-2xl mx-auto mt-12 animate-in fade-in zoom-in slide-in-from-bottom-10 duration-1000">
         <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-purple-500/20">
             <Plus className="w-10 h-10 text-white" />
         </div>
-        <h2 className="text-2xl font-bold mb-2">Start your journey</h2>
-        <p className="text-muted-foreground mb-8">You haven&apos;t created any forms yet. Create your first form to start collecting responses.</p>
+        <h2 className="text-2xl font-bold mb-2">Soft Drift</h2>
+        <p className="text-muted-foreground mb-8">No forms yet. Create your first masterpiece!</p>
         <CreateFormModal>
             <Button
                 className="bg-primary hover:bg-primary/90 text-white px-8 py-6 rounded-xl text-lg font-semibold transition-all hover:scale-105 active:scale-95 animate-pulse"
@@ -40,10 +43,16 @@ interface DashboardForm {
 }
 
 export default async function DashboardPage() {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user) {
+        redirect('/auth');
+    }
+
     await dbConnect();
 
-    // Fetch real forms
-    const formsDocs = (await Form.find({}).sort({ updatedAt: -1 }).lean()) as unknown as DashboardForm[];
+    // Fetch real forms for user only
+    const formsDocs = (await Form.find({ userId: session.user.id }).sort({ updatedAt: -1 }).lean()) as unknown as DashboardForm[];
 
     // Fetch counts for each form
     const formsWithCounts = await Promise.all(formsDocs.map(async (f: DashboardForm) => {
@@ -75,7 +84,7 @@ export default async function DashboardPage() {
                         Dashboard <span className="text-white/20 ml-2">v2</span>
                     </h1>
                     <p className="text-white/40 text-xl font-medium">
-                        Welcome back, <span className="text-white font-bold">User 👋</span>
+                        Welcome back, <span className="text-white font-bold">{session.user.name || 'User'} 👋</span>
                     </p>
                 </div>
                 <div className="flex items-center gap-4">

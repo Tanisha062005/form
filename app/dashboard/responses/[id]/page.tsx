@@ -3,10 +3,11 @@ import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
 import Submission from '@/models/Submission';
 import FormActivity from '@/models/FormActivity';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import {
     BarChart3,
-    Table as TableIcon
+    Table as TableIcon,
+    ShieldAlert
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import ResponseHeader from '@/components/ResponseHeader';
@@ -14,13 +15,42 @@ import SubmissionsTable from '@/components/SubmissionsTable';
 import AnalyticsCharts from '@/components/AnalyticsCharts';
 import ExportCSV from '@/components/ExportCSV';
 import FormActivitySidebar from '@/components/FormActivitySidebar';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default async function ResponsesPage({ params }: { params: { id: string } }) {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user?.id) {
+        redirect('/auth');
+    }
+
     await dbConnect();
 
     // Fetch form and submissions
     const formDoc = await Form.findById(params.id).lean();
     if (!formDoc) return notFound();
+
+    if ((formDoc as any).userId !== session.user.id) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] max-w-2xl mx-auto text-center px-6 animate-in fade-in zoom-in duration-500">
+                <div className="glass p-12 rounded-3xl border border-red-500/20 bg-red-500/5 space-y-6 shadow-[0_0_50px_rgba(239,68,68,0.1)]">
+                    <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/30">
+                        <ShieldAlert className="w-10 h-10 text-red-500" />
+                    </div>
+                    <h1 className="text-3xl font-bold text-white">Access Denied</h1>
+                    <p className="text-muted-foreground">You do not have permission to view responses for this form.</p>
+                    <Link href="/dashboard">
+                        <Button variant="ghost" className="glass border-white/10 hover:bg-white/5 mt-4">
+                            Return to Dashboard
+                        </Button>
+                    </Link>
+                </div>
+            </div>
+        );
+    }
 
     const submissionsDocs = await Submission.find({ formId: params.id }).sort({ submittedAt: -1 }).lean();
 

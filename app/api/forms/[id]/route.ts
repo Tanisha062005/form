@@ -2,17 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
 import FormActivity from '@/models/FormActivity';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
         const form = await Form.findById(params.id);
 
         if (!form) {
             return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+        }
+
+        if (form.userId !== session.user.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
         return NextResponse.json(form);
@@ -27,11 +38,24 @@ export async function PATCH(
     { params }: { params: { id: string } }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
         const body = await req.json();
 
         // Get the old form to compare changes
         const oldForm = await Form.findById(params.id);
+
+        if (!oldForm) {
+            return NextResponse.json({ error: 'Form not found' }, { status: 404 });
+        }
+
+        if (oldForm.userId !== session.user.id) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
         const updatedForm = await Form.findByIdAndUpdate(
             params.id,
@@ -77,8 +101,22 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         await dbConnect();
         const { id } = params;
+
+        const formItem = await Form.findById(id);
+        if (!formItem) {
+            return NextResponse.json({ error: "Form not found" }, { status: 404 });
+        }
+
+        if (formItem.userId !== session.user.id) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
 
         const deletedForm = await Form.findByIdAndDelete(id);
 

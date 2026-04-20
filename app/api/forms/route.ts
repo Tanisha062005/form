@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/mongodb';
 import Form from '@/models/Form';
 import FormActivity from '@/models/FormActivity';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
     try {
@@ -12,13 +14,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
         }
 
-        // placeholder creatorId until auth is implemented
-        const creatorId = "user_123";
+        const session = await getServerSession(authOptions);
+
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const userId = session.user.id;
 
         const newForm = await Form.create({
             title,
             description,
-            creatorId,
+            userId,
             fields: [],
             settings: {
                 isActive: true,
@@ -31,7 +38,7 @@ export async function POST(req: NextRequest) {
             eventType: 'created',
             description: `Form "${title}" created`,
             metadata: {
-                creatorId,
+                userId,
             },
         });
 

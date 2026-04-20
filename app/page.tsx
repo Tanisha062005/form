@@ -52,12 +52,12 @@ export default function Home() {
       </motion.p>
 
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-6 pt-8">
-        <Link href="/dashboard">
-          <Button size="lg" className="h-16 px-10 rounded-2xl text-lg font-bold bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all hover:scale-105 active:scale-95">
+        <Button asChild size="lg" className="h-16 px-10 rounded-2xl text-lg font-bold bg-primary hover:bg-primary/90 shadow-[0_0_20px_rgba(147,51,234,0.4)] transition-all hover:scale-105 active:scale-95">
+          <Link href="/dashboard">
             Get Started
             <ArrowRight className="ml-2 w-5 h-5" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
         <Button variant="ghost" size="lg" className="h-16 px-10 rounded-2xl text-lg font-bold glass border-white/10 hover:bg-white/5">
           View Demo
         </Button>

@@ -383,6 +383,7 @@ export default function BuilderPage() {
                                                 }}
                                                 previewDate={previewDates[field.id]}
                                                 onDateChange={(date) => setPreviewDates(prev => ({ ...prev, [field.id]: date }))}
+                                                updateField={updateField}
                                             />
                                         ))
                                     )}
@@ -396,6 +397,7 @@ export default function BuilderPage() {
                                                 onClick={() => { }}
                                                 onDelete={() => { }}
                                                 onDateChange={() => { }}
+                                                updateField={() => { }}
                                             />
                                         </div>
                                     ) : null}

@@ -19,7 +19,7 @@ const FieldSchema = new Schema({
 const FormSchema = new Schema({
     title: { type: String, required: true },
     description: { type: String },
-    creatorId: { type: String, required: true },
+    userId: { type: String, required: true },
     customSlug: {
         type: String,
         unique: true,
