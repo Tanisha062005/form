@@ -3,15 +3,17 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { LogOut } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { LogOut, Menu, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import CreateFormModal from './CreateFormModal';
+import { Button } from '@/components/ui/button';
 import { useOfflineSync } from './providers/OfflineProvider';
 
 const Navbar = () => {
     const { data: session } = useSession();
     const { isOffline, isSyncing, pendingCount } = useOfflineSync();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     return (
         <motion.nav
@@ -54,7 +56,7 @@ const Navbar = () => {
                     )}
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="hidden md:flex items-center gap-4">
                     <CreateFormModal />
                     {session && (
                         <button
@@ -62,11 +64,48 @@ const Navbar = () => {
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
                         >
                             <LogOut className="w-4 h-4" />
-                            <span className="hidden sm:inline">Sign Out</span>
+                            <span className="hidden md:inline">Sign Out</span>
                         </button>
                     )}
                 </div>
+
+                <div className="md:hidden flex items-center">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="p-2 text-white/70 hover:text-white"
+                    >
+                        {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                    </button>
+                </div>
             </div>
+
+            <AnimatePresence>
+                {isMobileMenuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20, transition: { duration: 0.2 } }}
+                        className="md:hidden absolute top-full w-full mt-4"
+                    >
+                        <div className="glass rounded-2xl p-4 flex flex-col gap-4 shadow-2xl border border-white/10">
+                            <CreateFormModal>
+                                <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold border-0 h-12 rounded-xl text-lg relative z-50">
+                                    Create Form
+                                </Button>
+                            </CreateFormModal>
+                            {session && (
+                                <button
+                                    onClick={() => signOut({ callbackUrl: '/auth' })}
+                                    className="w-full flex justify-center items-center gap-2 px-3 py-3 rounded-xl text-sm font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 transition-all duration-200"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                    <span>Sign Out</span>
+                                </button>
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.nav>
     );
 };

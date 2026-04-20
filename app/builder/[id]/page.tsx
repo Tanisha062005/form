@@ -43,7 +43,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { SortableField } from '@/components/SortableField';
 import { nanoid } from 'nanoid';
 import { Button } from '@/components/ui/button';
@@ -110,6 +110,7 @@ export default function BuilderPage() {
     const [previewDates, setPreviewDates] = useState<Record<string, Date | undefined>>({});
     const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+    const [isMobileComponentsOpen, setIsMobileComponentsOpen] = useState(false);
     const [publishing, setPublishing] = useState(false);
     const [activeTab, setActiveTab] = useState<'content' | 'logic' | 'validation'>('content');
     const [formSettings, setFormSettings] = useState({
@@ -329,9 +330,9 @@ export default function BuilderPage() {
                 </div>
             </div>
 
-            <div className="flex flex-1 gap-6 overflow-hidden">
+            <div className="flex flex-col lg:flex-row flex-1 gap-6 overflow-hidden relative">
                 {/* Left Sidebar: Components */}
-                <div className="w-72 glass rounded-3xl p-6 flex flex-col gap-6 overflow-y-auto border-white/5">
+                <div className="hidden lg:flex w-72 glass rounded-3xl p-6 flex-col gap-6 overflow-y-auto border-white/5">
                     <div>
                         <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">Components</h3>
                         <div className="grid grid-cols-1 gap-3">
@@ -408,7 +409,7 @@ export default function BuilderPage() {
                 </div>
 
                 {/* Right Sidebar: Properties */}
-                <div className="w-80 glass rounded-3xl flex flex-col border-white/5 overflow-hidden">
+                <div className="hidden lg:flex w-80 glass rounded-3xl flex-col border-white/5 overflow-hidden">
                     <div className="p-6 border-b border-white/5">
                         <div className="flex items-center gap-2 mb-1">
                             <Settings className="w-4 h-4 text-purple-400" />
@@ -903,6 +904,70 @@ export default function BuilderPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Mobile Floating Action Button */}
+            <div className="lg:hidden fixed bottom-6 right-6 z-40">
+                <Button
+                    onClick={() => setIsMobileComponentsOpen(true)}
+                    className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-[0_0_30px_rgba(147,51,234,0.6)] border border-white/20 flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                >
+                    <Plus className="w-8 h-8" />
+                </Button>
+            </div>
+
+            {/* Mobile Bottom Sheet Drawer for Components */}
+            <AnimatePresence>
+                {isMobileComponentsOpen && (
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsMobileComponentsOpen(false)}
+                            className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 pointer-events-auto"
+                        />
+                        <motion.div
+                            initial={{ y: "100%", opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: "100%", opacity: 0 }}
+                            transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                            className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-2xl border-t border-white/10 rounded-t-3xl p-6 pointer-events-auto pb-12"
+                        >
+                            <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6 shrink-0 pointer-events-none" />
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold">Add Component</h3>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setIsMobileComponentsOpen(false)}
+                                    className="h-8 w-8 text-white/50 hover:text-white"
+                                >
+                                    <Plus className="w-5 h-5 rotate-45" />
+                                </Button>
+                            </div>
+                            <ScrollArea className="h-[40vh]">
+                                <div className="grid grid-cols-2 gap-3 pr-4">
+                                    {componentList.map((comp) => (
+                                        <button
+                                            key={comp.type}
+                                            onClick={() => {
+                                                addField(comp.type);
+                                                setIsMobileComponentsOpen(false);
+                                            }}
+                                            className="flex flex-col items-center gap-3 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-purple-500/50 hover:bg-white/10 transition-all text-center group"
+                                        >
+                                            <div className="p-3 rounded-xl bg-white/5 group-hover:bg-purple-500/20 transition-colors">
+                                                <comp.icon className="w-6 h-6 text-purple-400" />
+                                            </div>
+                                            <span className="text-xs font-semibold">{comp.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

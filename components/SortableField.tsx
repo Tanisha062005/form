@@ -52,14 +52,14 @@ function EditableLabel({
                         setIsEditing(false);
                     }
                 }}
-                className="text-lg font-bold bg-transparent outline-none border-b border-purple-500 w-full text-white"
+                className="text-lg font-bold bg-transparent outline-none border-b border-purple-500 w-full text-white py-2 min-h-[44px]"
             />
         );
     }
 
     return (
         <Label 
-            className="text-lg font-bold cursor-text hover:text-purple-400 transition-colors"
+            className="text-lg font-bold cursor-text hover:text-purple-400 transition-colors py-2 flex items-center min-h-[44px]"
             onClick={(e) => {
                 e.stopPropagation();
                 setIsEditing(true);

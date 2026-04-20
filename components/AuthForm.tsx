@@ -73,8 +73,8 @@ export default function AuthForm() {
     };
 
     return (
-        <div className="auth-container w-full max-w-[750px] min-h-[460px] relative z-10">
-            <div className="relative z-10 w-full min-h-[460px]">
+        <div className="auth-container w-full max-w-[750px] min-h-[460px] relative z-10 overflow-hidden md:overflow-visible">
+            <div className="relative z-10 w-full min-h-[460px] flex flex-col md:flex-row">
 
                 {/* ── Both Form Panels sit side-by-side behind the overlay ── */}
                 <div className="hidden md:flex w-full min-h-[460px]">
@@ -177,7 +177,7 @@ export default function AuthForm() {
                 </div>
 
                 {/* ── Mobile: Single column layout ── */}
-                <div className="flex md:hidden items-center justify-center p-6 min-h-[460px]">
+                <div className="flex flex-col md:hidden items-center justify-center p-6 min-h-[460px] w-full max-w-full overflow-hidden">
                     <AnimatePresence mode="wait">
                         {isLogin ? (
                             <motion.div
