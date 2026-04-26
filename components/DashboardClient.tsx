@@ -4,7 +4,8 @@ import React, { useState, useMemo } from 'react';
 import {
     LayoutGrid,
     Grid2X2,
-    List
+    List,
+    Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +26,7 @@ import SearchSortBar from './SearchSortBar';
 import FormCard from './FormCard';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 interface Form {
     _id: string;
@@ -138,25 +140,43 @@ export default function DashboardClient({ initialForms }: DashboardClientProps) 
         >
             <div className="flex gap-12 pt-8">
                 {/* Sidebar */}
+                {/* Desktop Sidebar */}
                 <DashboardSidebar
                     folders={folders}
                     activeFolder={activeFolder}
                     onFolderSelect={setActiveFolder}
-                    onFolderCreated={(name) => {
-                        // Creating a folder doesn't need an API call immediately 
-                        // as it's derived from form labels.
-                        setActiveFolder(name);
-                    }}
+                    onFolderCreated={(name) => setActiveFolder(name)}
+                    className="hidden lg:flex"
                 />
 
                 {/* Main Content */}
-                <div className="flex-1 space-y-12">
+                <div className="flex-1 space-y-12 min-w-0">
                     <div className="space-y-8">
                         <div className="flex items-center justify-between gap-4">
-                            <h2 className="text-3xl font-black uppercase tracking-tighter text-white">
-                                {activeFolder === 'all' ? 'All Forms' : activeFolder}
-                                <span className="ml-4 text-sm font-bold text-white/20 bg-white/5 px-3 py-1 rounded-full">{filteredForms.length}</span>
-                            </h2>
+                            <div className="flex items-center gap-4">
+                                {/* Mobile Sidebar Trigger */}
+                                <Sheet>
+                                    <SheetTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="lg:hidden glass h-12 w-12 rounded-xl">
+                                            <Menu className="w-6 h-6" />
+                                        </Button>
+                                    </SheetTrigger>
+                                    <SheetContent side="left" className="glass border-white/10 p-6 w-80">
+                                        <DashboardSidebar
+                                            folders={folders}
+                                            activeFolder={activeFolder}
+                                            onFolderSelect={(f) => {
+                                                setActiveFolder(f);
+                                            }}
+                                            onFolderCreated={(name) => setActiveFolder(name)}
+                                        />
+                                    </SheetContent>
+                                </Sheet>
+                                <h2 className="text-3xl font-black uppercase tracking-tighter text-white truncate">
+                                    {activeFolder === 'all' ? 'All Forms' : activeFolder}
+                                    <span className="ml-4 text-sm font-bold text-white/20 bg-white/5 px-3 py-1 rounded-full">{filteredForms.length}</span>
+                                </h2>
+                            </div>
                             <div className="flex items-center gap-2">
                                 <Button variant="ghost" size="icon" className="glass h-10 w-10 text-white/40 hover:text-white rounded-xl">
                                     <Grid2X2 className="w-5 h-5" />

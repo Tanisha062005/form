@@ -54,10 +54,11 @@ export default function DashboardSidebar({
     folders,
     activeFolder,
     onFolderSelect,
-    onFolderCreated
-}: DashboardSidebarProps) {
+    onFolderCreated,
+    className
+}: DashboardSidebarProps & { className?: string }) {
     return (
-        <aside className="w-80 hidden lg:flex flex-col gap-8 h-[calc(100vh-8rem)] sticky top-32">
+        <aside className={cn("w-full lg:w-80 flex flex-col gap-8 h-full lg:h-[calc(100vh-8rem)] lg:sticky lg:top-32", className)}>
             {/* Main Navigation */}
             <div className="space-y-4">
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-white/30 ml-4">Main Menu</p>

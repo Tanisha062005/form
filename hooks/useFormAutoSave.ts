@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { toast } from "sonner";
 
 interface UseFormAutoSaveProps {
@@ -73,14 +73,14 @@ export function useFormAutoSave({ formId, values, reset }: UseFormAutoSaveProps)
     }, [values, storageKey]);
 
     // 3. Cleanup Method
-    const clearDraft = () => {
+    const clearDraft = useCallback(() => {
         try {
             localStorage.removeItem(storageKey);
             setLastSaved(null);
         } catch (error) {
             console.error("Failed to clear form draft:", error);
         }
-    };
+    }, [storageKey]);
 
     return { lastSaved, clearDraft };
 }

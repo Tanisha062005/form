@@ -7,7 +7,9 @@ import {
     CheckCircle2,
     Power,
     Settings,
-    Clock
+    Clock,
+    Undo,
+    Send
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -31,6 +33,9 @@ const eventIcons = {
     status_changed: Power,
     response_received: Activity,
     settings_updated: Settings,
+    submission_initiated: Send,
+    submission_undone: Undo,
+    final_submission_saved: CheckCircle2,
 };
 
 const eventColors = {
@@ -38,6 +43,9 @@ const eventColors = {
     status_changed: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
     response_received: 'text-purple-400 bg-purple-500/20 border-purple-500/30',
     settings_updated: 'text-orange-400 bg-orange-500/20 border-orange-500/30',
+    submission_initiated: 'text-blue-400 bg-blue-500/20 border-blue-500/30',
+    submission_undone: 'text-red-400 bg-red-500/20 border-red-500/30',
+    final_submission_saved: 'text-indigo-400 bg-indigo-500/20 border-indigo-500/30',
 };
 
 export default function FormActivitySidebar({ activities }: FormActivitySidebarProps) {

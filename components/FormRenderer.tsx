@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -331,16 +331,17 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         }
     }, [form._id, form.settings?.singleSubmission, locationStates, router, isOffline, updatePendingCount, clearDraft]);
 
+    const startTimeRef = useRef<number | null>(null);
+
     React.useEffect(() => {
         let animationFrameId: number;
-        let startTime: number;
         
         if (countdownActive) {
             const duration = 10000; // 10 seconds
             
             const tick = (timestamp: number) => {
-                if (!startTime) startTime = timestamp;
-                const elapsed = timestamp - startTime;
+                if (startTimeRef.current === null) startTimeRef.current = timestamp;
+                const elapsed = timestamp - startTimeRef.current;
                 const remaining = Math.max(0, Math.ceil((duration - elapsed) / 1000));
                 
                 setCountdown(remaining);
@@ -356,6 +357,8 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
             };
             
             animationFrameId = requestAnimationFrame(tick);
+        } else {
+            startTimeRef.current = null;
         }
         
         return () => {
@@ -878,19 +881,31 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                             </div>
 
                                             <div className="space-y-4">
-                                                <h2 className="text-3xl font-black text-white">Sending Response...</h2>
+                                                <h2 className="text-3xl font-black text-white">
+                                                    {submitting ? "Processing..." : "Sending Response..."}
+                                                </h2>
                                                 <p className="text-muted-foreground text-lg">
-                                                    Taking a moment to double-check. You can undo this now.
+                                                    {submitting 
+                                                        ? "Finalizing your submission. Please don't close this window."
+                                                        : "Taking a moment to double-check. You can undo this now."
+                                                    }
                                                 </p>
+                                                {submitting && (
+                                                    <div className="flex justify-center pt-4">
+                                                        <Loader2 className="w-10 h-10 text-purple-400 animate-spin" />
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            <Button
-                                                type="button"
-                                                onClick={handleUndo}
-                                                className="w-full h-16 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xl border border-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                                            >
-                                                Undo Submission
-                                            </Button>
+                                            {!submitting && (
+                                                <Button
+                                                    type="button"
+                                                    onClick={handleUndo}
+                                                    className="w-full h-16 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xl border border-white/10 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                >
+                                                    Undo Submission
+                                                </Button>
+                                            )}
                                         </motion.div>
                                     </motion.div>
                                 )}

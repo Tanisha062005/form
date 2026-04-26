@@ -73,19 +73,13 @@ export async function POST(
         if (existingSubmission) {
             // Update existing submission
             existingSubmission.answers = answers;
-            existingSubmission.submittedAt = new Date(); // Reset the 10m window on edit? User request says "For 10 minutes after initial submission", let's keep initial submittedAt or update it? "After 10 minutes, the Edit capability should automatically expire". Usually, it's 10 mins from the VERY FIRST submission. 
-            // Let's NOT update submittedAt if we want a fixed 10m window from start.
-            // But if the user clicks edit and submits again, maybe they get another 10 mins? 
-            // The prompt says "For 10 minutes after the initial submission". So we should check against the original submittedAt.
-
-            // However, to keep it simple and friendly, let's just update the answers.
-            existingSubmission.answers = answers;
+            // Keep original submittedAt to maintain the fixed 10-minute window from start
             submission = await existingSubmission.save();
 
-            // Log activity: Final Submission Saved (or Updated)
+            // Log activity: Response Received (Update)
             await FormActivity.create({
                 formId: id,
-                eventType: 'final_submission_saved',
+                eventType: 'response_received',
                 description: 'Response updated within edit window',
                 metadata: {
                     submissionId: submission._id,
@@ -109,7 +103,7 @@ export async function POST(
             // 3. Log activity
             await FormActivity.create({
                 formId: id,
-                eventType: 'final_submission_saved',
+                eventType: 'response_received',
                 description: 'New response submitted',
                 metadata: {
                     submissionId: submission._id,

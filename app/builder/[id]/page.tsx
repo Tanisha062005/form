@@ -61,6 +61,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { CustomSlugInput } from "@/components/CustomSlugInput";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 // Types
 interface FormField {
@@ -125,6 +126,15 @@ export default function BuilderPage() {
     });
     const [customSlug, setCustomSlug] = useState<string>("");
     const [activeId, setActiveId] = useState<string | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const mql = window.matchMedia('(min-width: 1024px)');
+        setIsMobile(!mql.matches);
+        const onChange = () => setIsMobile(!mql.matches);
+        mql.addEventListener('change', onChange);
+        return () => mql.removeEventListener('change', onChange);
+    }, []);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -287,7 +297,8 @@ export default function BuilderPage() {
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-8rem)]">
+        <>
+            <div className="flex flex-col h-[calc(100vh-8rem)]">
             {/* Top Bar */}
             <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">
@@ -353,7 +364,7 @@ export default function BuilderPage() {
                 </div>
 
                 {/* Center Canvas: Preview */}
-                <div className="flex-1 flex flex-col min-h-0">
+                <div className="flex-1 flex flex-col min-w-0">
                     <ScrollArea className="flex-1 glass rounded-3xl border-white/5">
                         <div className="p-8 max-w-3xl mx-auto space-y-6">
                             <DndContext
@@ -406,317 +417,55 @@ export default function BuilderPage() {
                             </DndContext>
                         </div>
                     </ScrollArea>
-                </div>
 
-                {/* Right Sidebar: Properties */}
-                <div className="hidden lg:flex w-80 glass rounded-3xl flex-col border-white/5 overflow-hidden">
-                    <div className="p-6 border-b border-white/5">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Settings className="w-4 h-4 text-purple-400" />
-                            <h3 className="font-bold">Properties</h3>
+                    {/* Mobile Properties Drawer Trigger */}
+                    {selectedField && (
+                        <div className="lg:hidden fixed bottom-24 right-6 z-40">
+                            <Button
+                                onClick={() => setActiveTab('content')}
+                                className="h-12 px-6 rounded-xl glass border-purple-500/30 text-purple-400 font-bold shadow-xl animate-bounce"
+                            >
+                                <Settings className="w-4 h-4 mr-2" />
+                                Edit Field
+                            </Button>
                         </div>
-                        <p className="text-xs text-muted-foreground">Customize the selected field</p>
-                    </div>
-
-                    <div className="flex border-b border-white/5 p-2 gap-1 bg-white/5">
-                        <button
-                            onClick={() => setActiveTab('content')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${activeTab === 'content' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-muted-foreground hover:bg-white/5'}`}
-                        >
-                            <Settings className="w-4 h-3" />
-                            <span className="text-[10px] uppercase tracking-wider font-bold">Content</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('logic')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${activeTab === 'logic' ? 'bg-indigo-500/20 text-indigo-400 font-bold' : 'text-muted-foreground hover:bg-white/5'}`}
-                        >
-                            <Zap className="w-4 h-3" />
-                            <span className="text-[10px] uppercase tracking-wider font-bold">Logic</span>
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('validation')}
-                            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${activeTab === 'validation' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-muted-foreground hover:bg-white/5'}`}
-                        >
-                            <Shield className="w-4 h-3" />
-                            <span className="text-[10px] uppercase tracking-wider font-bold">Valid</span>
-                        </button>
-                    </div>
-
-                    <ScrollArea className="flex-1">
-                        {selectedField ? (
-                            <>
-                                {activeTab === 'content' && (
-                                    <div className="p-6 space-y-6">
-                                        <div className="space-y-2">
-                                            <Label className="text-xs uppercase tracking-wider font-semibold">Label</Label>
-                                            <Input
-                                                value={selectedField.label}
-                                                onChange={(e) => updateField(selectedField.id, { label: e.target.value })}
-                                                className="bg-white/5 border-white/10"
-                                            />
-                                        </div>
-
-                                        {(['text', 'email', 'number', 'select', 'date'].includes(selectedField.type)) && (
-                                            <div className="space-y-2">
-                                                <Label className="text-xs uppercase tracking-wider font-semibold">Placeholder</Label>
-                                                <Input
-                                                    value={selectedField.placeholder}
-                                                    onChange={(e) => updateField(selectedField.id, { placeholder: e.target.value })}
-                                                    className="bg-white/5 border-white/10"
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-2">
-                                            <Label className="text-xs uppercase tracking-wider font-semibold">Help Text</Label>
-                                            <Textarea
-                                                value={selectedField.helpText}
-                                                onChange={(e) => updateField(selectedField.id, { helpText: e.target.value })}
-                                                className="bg-white/5 border-white/10 min-h-[60px] text-sm"
-                                            />
-                                        </div>
-
-                                        {selectedField.type === 'location' && (
-                                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                                <div className="space-y-0.5">
-                                                    <Label className="font-semibold">Capture City Name</Label>
-                                                    <p className="text-[10px] text-muted-foreground italic">Use Reverse Geocoding</p>
-                                                </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedField.validation?.captureCity || false}
-                                                    onChange={(e) => updateField(selectedField.id, {
-                                                        validation: {
-                                                            ...selectedField.validation,
-                                                            captureCity: e.target.checked
-                                                        }
-                                                    })}
-                                                    className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                            <Label className="font-semibold">Required Field</Label>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedField.required}
-                                                onChange={(e) => updateField(selectedField.id, { required: e.target.checked })}
-                                                className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
-                                            />
-                                        </div>
-
-                                        {selectedField.type === 'date' && (
-                                            <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                                <div className="space-y-0.5">
-                                                    <Label className="font-semibold">Require Specific Range</Label>
-                                                    <p className="text-[10px] text-muted-foreground italic">Optional: Placeholder for range logic</p>
-                                                </div>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedField.requireRange || false}
-                                                    onChange={(e) => updateField(selectedField.id, { requireRange: e.target.checked })}
-                                                    className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
-                                                />
-                                            </div>
-                                        )}
-
-                                        {(['select', 'radio', 'checkbox'].includes(selectedField.type)) && (
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between">
-                                                    <Label className="text-xs uppercase tracking-wider font-semibold">Options</Label>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-6 text-[10px] uppercase font-bold text-purple-400"
-                                                        onClick={() => {
-                                                            const newOptions = [...(selectedField.options || []), `Option ${(selectedField.options?.length || 0) + 1}`];
-                                                            updateField(selectedField.id, { options: newOptions });
-                                                        }}
-                                                    >
-                                                        Add Option
-                                                    </Button>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {selectedField.options?.map((opt, i) => (
-                                                        <div key={i} className="flex gap-2">
-                                                            <Input
-                                                                value={opt}
-                                                                onChange={(e) => {
-                                                                    const newOptions = [...(selectedField.options || [])];
-                                                                    newOptions[i] = e.target.value;
-                                                                    updateField(selectedField.id, { options: newOptions });
-                                                                }}
-                                                                className="bg-white/5 border-white/10 h-9"
-                                                            />
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                onClick={() => {
-                                                                    const newOptions = selectedField.options?.filter((_, idx) => idx !== i);
-                                                                    updateField(selectedField.id, { options: newOptions });
-                                                                }}
-                                                                className="h-9 w-9 text-red-400 shrink-0"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {activeTab === 'logic' && (
-                                    <div className="p-6 space-y-6">
-                                        <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 mb-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Zap className="w-4 h-4 text-indigo-400" />
-                                                <span className="text-xs font-bold uppercase text-indigo-400 tracking-wider">Conditional Logic</span>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                                Show this field only if another field meets a specific condition.
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            <div className="space-y-2">
-                                                <Label className="text-xs uppercase tracking-wider font-semibold">Trigger Field</Label>
-                                                <select
-                                                    value={selectedField.logic?.triggerFieldId || ""}
-                                                    onChange={(e) => updateField(selectedField.id, {
-                                                        logic: {
-                                                            triggerFieldId: e.target.value,
-                                                            condition: selectedField.logic?.condition || 'equals',
-                                                            value: selectedField.logic?.value || ''
-                                                        }
-                                                    })}
-                                                    className="w-full glass-input h-11 rounded-xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-sm"
-                                                >
-                                                    <option value="" className="bg-[#030014]">None</option>
-                                                    {fields.filter(f => f.id !== selectedField.id).map(f => (
-                                                        <option key={f.id} value={f.id} className="bg-[#030014]">{f.label}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-
-                                            {selectedField.logic?.triggerFieldId && (
-                                                <>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs uppercase tracking-wider font-semibold">Condition</Label>
-                                                        <select
-                                                            value={selectedField.logic?.condition || "equals"}
-                                                            onChange={(e) => updateField(selectedField.id, {
-                                                                logic: {
-                                                                    ...selectedField.logic!,
-                                                                    condition: e.target.value as 'equals' | 'not_equals'
-                                                                }
-                                                            })}
-                                                            className="w-full glass-input h-11 rounded-xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-sm"
-                                                        >
-                                                            <option value="equals" className="bg-[#030014]">Equals</option>
-                                                            <option value="not_equals" className="bg-[#030014]">Not Equals</option>
-                                                        </select>
-                                                    </div>
-
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs uppercase tracking-wider font-semibold">Value</Label>
-                                                        <Input
-                                                            value={selectedField.logic?.value || ""}
-                                                            onChange={(e) => updateField(selectedField.id, {
-                                                                logic: {
-                                                                    ...selectedField.logic!,
-                                                                    value: e.target.value
-                                                                }
-                                                            })}
-                                                            placeholder="Enter value to match..."
-                                                            className="bg-white/5 border-white/10"
-                                                        />
-                                                    </div>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {activeTab === 'validation' && (
-                                    <div className="p-6 space-y-6">
-                                        <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 mb-4">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Shield className="w-4 h-4 text-blue-400" />
-                                                <span className="text-xs font-bold uppercase text-blue-400 tracking-wider">Custom Validation</span>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground leading-relaxed">
-                                                Set limits and requirements for this specific field.
-                                            </p>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            {(['text', 'email', 'textarea'].includes(selectedField.type)) && (
-                                                <>
-                                                    <div className="grid grid-cols-2 gap-4">
-                                                        <div className="space-y-2">
-                                                            <Label className="text-xs uppercase tracking-wider font-semibold">Min Chars</Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={selectedField.validation?.minChars || ""}
-                                                                onChange={(e) => updateField(selectedField.id, {
-                                                                    validation: {
-                                                                        ...selectedField.validation,
-                                                                        minChars: parseInt(e.target.value) || undefined
-                                                                    }
-                                                                })}
-                                                                className="bg-white/5 border-white/10"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label className="text-xs uppercase tracking-wider font-semibold">Max Chars</Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={selectedField.validation?.maxChars || ""}
-                                                                onChange={(e) => updateField(selectedField.id, {
-                                                                    validation: {
-                                                                        ...selectedField.validation,
-                                                                        maxChars: parseInt(e.target.value) || undefined
-                                                                    }
-                                                                })}
-                                                                className="bg-white/5 border-white/10"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </>
-                                            )}
-
-                                            {selectedField.type === 'number' && (
-                                                <div className="space-y-2">
-                                                    <Label className="text-xs uppercase tracking-wider font-semibold">Exact Digit Count</Label>
-                                                    <Input
-                                                        type="number"
-                                                        value={selectedField.validation?.exactDigits || ""}
-                                                        onChange={(e) => updateField(selectedField.id, {
-                                                            validation: {
-                                                                ...selectedField.validation,
-                                                                exactDigits: parseInt(e.target.value) || undefined
-                                                            }
-                                                        })}
-                                                        placeholder="e.g. 10 for Phone"
-                                                        className="bg-white/5 border-white/10"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </>
-                        ) : (
-                            <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground h-full opacity-50">
-                                <GripVertical className="w-12 h-12 mb-4" />
-                                <p>Select a field in the canvas to edit its properties</p>
-                            </div>
-                        )}
-                    </ScrollArea>
+                    )}
                 </div>
+
+                {/* Right Sidebar: Properties (Desktop) */}
+                <div className="hidden lg:flex w-80 glass rounded-3xl flex-col border-white/5 overflow-hidden">
+                    <PropertiesPanel 
+                        selectedField={selectedField}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                        updateField={updateField}
+                        fields={fields}
+                    />
+                </div>
+
+                {/* Mobile Properties Drawer */}
+                <Sheet open={!!selectedFieldId && isMobile} onOpenChange={(open) => !open && setSelectedFieldId(null)}>
+                    <SheetContent side="bottom" className="glass border-white/10 p-0 h-[80vh] rounded-t-[3rem] overflow-hidden lg:hidden">
+                        <SheetHeader className="p-6 border-b border-white/5">
+                            <SheetTitle className="flex items-center gap-2">
+                                <Settings className="w-4 h-4 text-purple-400" />
+                                <span>Field Properties</span>
+                            </SheetTitle>
+                            <SheetDescription>
+                                Customize the selected field settings.
+                            </SheetDescription>
+                        </SheetHeader>
+                        <ScrollArea className="h-full pb-20">
+                            <PropertiesPanel 
+                                selectedField={selectedField}
+                                activeTab={activeTab}
+                                setActiveTab={setActiveTab}
+                                updateField={updateField}
+                                fields={fields}
+                            />
+                        </ScrollArea>
+                    </SheetContent>
+                </Sheet>
             </div>
             {/* Form Settings Modal */}
             <Dialog open={isSettingsModalOpen} onOpenChange={setIsSettingsModalOpen}>
@@ -968,6 +717,333 @@ export default function BuilderPage() {
                     </>
                 )}
             </AnimatePresence>
+        </div>
+    </>
+    );
+}
+
+// Sub-component for Properties Panel
+function PropertiesPanel({ 
+    selectedField, 
+    activeTab, 
+    setActiveTab, 
+    updateField, 
+    fields 
+}: { 
+    selectedField?: FormField, 
+    activeTab: string, 
+    setActiveTab: (tab: 'content' | 'logic' | 'validation') => void, 
+    updateField: (id: string, data: Partial<FormField>) => void, 
+    fields: FormField[] 
+}) {
+    return (
+        <div className="flex flex-col h-full">
+            <div className="p-6 border-b border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                    <Settings className="w-4 h-4 text-purple-400" />
+                    <h3 className="font-bold">Properties</h3>
+                </div>
+                <p className="text-xs text-muted-foreground">Customize the selected field</p>
+            </div>
+
+            <div className="flex border-b border-white/5 p-2 gap-1 bg-white/5">
+                <button
+                    onClick={() => setActiveTab('content')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${activeTab === 'content' ? 'bg-purple-500/20 text-purple-400 font-bold' : 'text-muted-foreground hover:bg-white/5'}`}
+                >
+                    <Settings className="w-4 h-3" />
+                    <span className="text-[10px] uppercase tracking-wider font-bold">Content</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('logic')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${activeTab === 'logic' ? 'bg-indigo-500/20 text-indigo-400 font-bold' : 'text-muted-foreground hover:bg-white/5'}`}
+                >
+                    <Zap className="w-4 h-3" />
+                    <span className="text-[10px] uppercase tracking-wider font-bold">Logic</span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('validation')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all ${activeTab === 'validation' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'text-muted-foreground hover:bg-white/5'}`}
+                >
+                    <Shield className="w-4 h-3" />
+                    <span className="text-[10px] uppercase tracking-wider font-bold">Valid</span>
+                </button>
+            </div>
+
+            <ScrollArea className="flex-1">
+                {selectedField ? (
+                    <>
+                        {activeTab === 'content' && (
+                            <div className="p-6 space-y-6">
+                                <div className="space-y-2">
+                                    <Label className="text-xs uppercase tracking-wider font-semibold">Label</Label>
+                                    <Input
+                                        value={selectedField.label}
+                                        onChange={(e) => updateField(selectedField.id, { label: e.target.value })}
+                                        className="bg-white/5 border-white/10"
+                                    />
+                                </div>
+
+                                {(['text', 'email', 'number', 'select', 'date'].includes(selectedField.type)) && (
+                                    <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wider font-semibold">Placeholder</Label>
+                                        <Input
+                                            value={selectedField.placeholder}
+                                            onChange={(e) => updateField(selectedField.id, { placeholder: e.target.value })}
+                                            className="bg-white/5 border-white/10"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs uppercase tracking-wider font-semibold">Help Text</Label>
+                                    <Textarea
+                                        value={selectedField.helpText}
+                                        onChange={(e) => updateField(selectedField.id, { helpText: e.target.value })}
+                                        className="bg-white/5 border-white/10 min-h-[60px] text-sm"
+                                    />
+                                </div>
+
+                                {selectedField.type === 'location' && (
+                                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                        <div className="space-y-0.5">
+                                            <Label className="font-semibold">Capture City Name</Label>
+                                            <p className="text-[10px] text-muted-foreground italic">Use Reverse Geocoding</p>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedField.validation?.captureCity || false}
+                                            onChange={(e) => updateField(selectedField.id, {
+                                                validation: {
+                                                    ...selectedField.validation,
+                                                    captureCity: e.target.checked
+                                                }
+                                            })}
+                                            className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                    <Label className="font-semibold">Required Field</Label>
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedField.required}
+                                        onChange={(e) => updateField(selectedField.id, { required: e.target.checked })}
+                                        className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
+                                    />
+                                </div>
+
+                                {selectedField.type === 'date' && (
+                                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                        <div className="space-y-0.5">
+                                            <Label className="font-semibold">Require Specific Range</Label>
+                                            <p className="text-[10px] text-muted-foreground italic">Optional: Placeholder for range logic</p>
+                                        </div>
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedField.requireRange || false}
+                                            onChange={(e) => updateField(selectedField.id, { requireRange: e.target.checked })}
+                                            className="h-5 w-5 rounded border-white/10 bg-white/5 text-purple-500 focus:ring-purple-500"
+                                        />
+                                    </div>
+                                )}
+
+                                {(['select', 'radio', 'checkbox'].includes(selectedField.type)) && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-xs uppercase tracking-wider font-semibold">Options</Label>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 text-[10px] uppercase font-bold text-purple-400"
+                                                onClick={() => {
+                                                    const newOptions = [...(selectedField.options || []), `Option ${(selectedField.options?.length || 0) + 1}`];
+                                                    updateField(selectedField.id, { options: newOptions });
+                                                }}
+                                            >
+                                                Add Option
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {selectedField.options?.map((opt, i) => (
+                                                <div key={i} className="flex gap-2">
+                                                    <Input
+                                                        value={opt}
+                                                        onChange={(e) => {
+                                                            const newOptions = [...(selectedField.options || [])];
+                                                            newOptions[i] = e.target.value;
+                                                            updateField(selectedField.id, { options: newOptions });
+                                                        }}
+                                                        className="bg-white/5 border-white/10 h-9"
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        onClick={() => {
+                                                            const newOptions = selectedField.options?.filter((_, idx) => idx !== i);
+                                                            updateField(selectedField.id, { options: newOptions });
+                                                        }}
+                                                        className="h-9 w-9 text-red-400 shrink-0"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {activeTab === 'logic' && (
+                            <div className="p-6 space-y-6">
+                                <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Zap className="w-4 h-4 text-indigo-400" />
+                                        <span className="text-xs font-bold uppercase text-indigo-400 tracking-wider">Conditional Logic</span>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                        Show this field only if another field meets a specific condition.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label className="text-xs uppercase tracking-wider font-semibold">Trigger Field</Label>
+                                        <select
+                                            value={selectedField.logic?.triggerFieldId || ""}
+                                            onChange={(e) => updateField(selectedField.id, {
+                                                logic: {
+                                                    triggerFieldId: e.target.value,
+                                                    condition: selectedField.logic?.condition || 'equals',
+                                                    value: selectedField.logic?.value || ''
+                                                }
+                                            })}
+                                            className="w-full glass bg-white/5 border-white/10 h-11 rounded-xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-sm"
+                                        >
+                                            <option value="" className="bg-[#030014]">None</option>
+                                            {fields.filter(f => f.id !== selectedField.id).map(f => (
+                                                <option key={f.id} value={f.id} className="bg-[#030014]">{f.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {selectedField.logic?.triggerFieldId && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs uppercase tracking-wider font-semibold">Condition</Label>
+                                                <select
+                                                    value={selectedField.logic?.condition || "equals"}
+                                                    onChange={(e) => updateField(selectedField.id, {
+                                                        logic: {
+                                                            ...selectedField.logic!,
+                                                            condition: e.target.value as 'equals' | 'not_equals'
+                                                        }
+                                                    })}
+                                                    className="w-full glass bg-white/5 border-white/10 h-11 rounded-xl px-4 appearance-none outline-none focus:border-purple-500 transition-all text-sm"
+                                                >
+                                                    <option value="equals" className="bg-[#030014]">Equals</option>
+                                                    <option value="not_equals" className="bg-[#030014]">Not Equals</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <Label className="text-xs uppercase tracking-wider font-semibold">Value</Label>
+                                                <Input
+                                                    value={selectedField.logic?.value || ""}
+                                                    onChange={(e) => updateField(selectedField.id, {
+                                                        logic: {
+                                                            ...selectedField.logic!,
+                                                            value: e.target.value
+                                                        }
+                                                    })}
+                                                    placeholder="Enter value to match..."
+                                                    className="bg-white/5 border-white/10"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'validation' && (
+                            <div className="p-6 space-y-6">
+                                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10 mb-4">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Shield className="w-4 h-4 text-blue-400" />
+                                        <span className="text-xs font-bold uppercase text-blue-400 tracking-wider">Custom Validation</span>
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                                        Set limits and requirements for this specific field.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {(['text', 'email', 'textarea'].includes(selectedField.type)) && (
+                                        <>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs uppercase tracking-wider font-semibold">Min Chars</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={selectedField.validation?.minChars || ""}
+                                                        onChange={(e) => updateField(selectedField.id, {
+                                                            validation: {
+                                                                ...selectedField.validation,
+                                                                minChars: parseInt(e.target.value) || undefined
+                                                            }
+                                                        })}
+                                                        className="bg-white/5 border-white/10"
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label className="text-xs uppercase tracking-wider font-semibold">Max Chars</Label>
+                                                    <Input
+                                                        type="number"
+                                                        value={selectedField.validation?.maxChars || ""}
+                                                        onChange={(e) => updateField(selectedField.id, {
+                                                            validation: {
+                                                                ...selectedField.validation,
+                                                                maxChars: parseInt(e.target.value) || undefined
+                                                            }
+                                                        })}
+                                                        className="bg-white/5 border-white/10"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {selectedField.type === 'number' && (
+                                        <div className="space-y-2">
+                                            <Label className="text-xs uppercase tracking-wider font-semibold">Exact Digit Count</Label>
+                                            <Input
+                                                type="number"
+                                                value={selectedField.validation?.exactDigits || ""}
+                                                onChange={(e) => updateField(selectedField.id, {
+                                                    validation: {
+                                                        ...selectedField.validation,
+                                                        exactDigits: parseInt(e.target.value) || undefined
+                                                    }
+                                                })}
+                                                placeholder="e.g. 10 for Phone"
+                                                className="bg-white/5 border-white/10"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground h-full opacity-50">
+                        <GripVertical className="w-12 h-12 mb-4" />
+                        <p>Select a field in the canvas to edit its properties</p>
+                    </div>
+                )}
+            </ScrollArea>
         </div>
     );
 }
