@@ -4,7 +4,7 @@ const FieldSchema = new Schema({
     id: { type: String, required: true },
     type: {
         type: String,
-        enum: ['text', 'email', 'number', 'select', 'radio', 'checkbox', 'date', 'file', 'location'],
+        enum: ['text', 'email', 'number', 'select', 'radio', 'checkbox', 'date', 'file', 'location', 'rating'],
         required: true,
     },
     label: { type: String, required: true },

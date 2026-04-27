@@ -5,7 +5,9 @@ import {
     Clock,
     MoreVertical,
     Link as LinkIcon,
-    GripHorizontal
+    GripHorizontal,
+    Copy,
+    Check
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +37,7 @@ interface FormCardProps {
 }
 
 export default function FormCard({ form }: FormCardProps) {
+    const [copied, setCopied] = React.useState(false);
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: form._id,
         data: { formId: form._id }
@@ -61,6 +64,15 @@ export default function FormCard({ form }: FormCardProps) {
         status = (status === 'Closed' || !isActive) ? 'Closed' : isExpired ? 'Expired' : 'Limit Reached';
         statusGlow = "shadow-[0_0_15px_rgba(239,68,68,0.4)] border-red-500/50 text-red-400";
     }
+
+    const handleCopyLink = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://flowform-self.vercel.app';
+        navigator.clipboard.writeText(`${origin}/f/${form._id}`);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     return (
         <div
@@ -122,6 +134,20 @@ export default function FormCard({ form }: FormCardProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleCopyLink}
+                        className={cn(
+                            "h-10 w-10 rounded-xl transition-all",
+                            copied
+                                ? "text-green-400 bg-green-400/10 hover:bg-green-400/20"
+                                : "text-white/30 hover:text-blue-400 hover:bg-blue-400/10"
+                        )}
+                        title="Copy share link"
+                    >
+                        {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                    </Button>
                     <Link href={`/f/${form._id}`} target="_blank">
                         <Button variant="ghost" size="icon" className="h-10 w-10 text-white/30 hover:text-blue-400 hover:bg-blue-400/10 rounded-xl">
                             <LinkIcon className="w-5 h-5" />

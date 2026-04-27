@@ -73,7 +73,7 @@ export function CustomSlugInput({ value, onChange, className, formId }: CustomSl
 
     const handleCopy = () => {
         // If the window origin is available (client-side), use it.
-        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://formflow.com';
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://flowform-self.vercel.app';
         navigator.clipboard.writeText(`${origin}/f/${value}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -160,8 +160,8 @@ export function CustomSlugInput({ value, onChange, className, formId }: CustomSl
                 <div className="relative bg-[#030303]/90 backdrop-blur-2xl border border-white/10 rounded-xl overflow-hidden flex flex-col z-10">
 
                     <div className="flex items-center px-4 py-3 gap-1">
-                        <span className="text-indigo-400 font-medium select-none whitespace-nowrap">
-                            formflow.com/
+                        <span className="text-indigo-400 font-medium select-none whitespace-nowrap text-xs sm:text-sm">
+                            flowform-self.vercel.app/f/
                         </span>
                         <input
                             type="text"
@@ -196,8 +196,8 @@ export function CustomSlugInput({ value, onChange, className, formId }: CustomSl
                 <div className="flex items-center text-sm">
                     <span className="text-white/50 mr-2">Your link:</span>
                     {/* Framer Motion Soft Drift for Preview text */}
-                    <div className="text-white font-semibold font-poppins flex items-center h-6 overflow-hidden">
-                        <span>formflow.com/</span>
+                    <div className="text-white font-semibold font-poppins flex items-center h-6 overflow-hidden text-xs sm:text-sm">
+                        <span>flowform-self.vercel.app/f/</span>
                         <div className="flex ml-[1px]">
                             <AnimatePresence mode="popLayout">
                                 {value.split('').map((char, index) => (
