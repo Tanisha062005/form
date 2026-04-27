@@ -57,7 +57,7 @@ const Navbar = () => {
                 </div>
 
                 <div className="hidden md:flex items-center gap-4">
-                    <CreateFormModal />
+                    {session && <CreateFormModal />}
                     {session && (
                         <button
                             onClick={() => signOut({ callbackUrl: '/auth' })}
@@ -88,11 +88,13 @@ const Navbar = () => {
                         className="md:hidden absolute top-full w-full mt-4"
                     >
                         <div className="glass rounded-2xl p-4 flex flex-col gap-4 shadow-2xl border border-white/10">
-                            <CreateFormModal>
-                                <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold border-0 h-12 rounded-xl text-lg relative z-50">
-                                    Create Form
-                                </Button>
-                            </CreateFormModal>
+                            {session && (
+                                <CreateFormModal>
+                                    <Button className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold border-0 h-12 rounded-xl text-lg relative z-50">
+                                        Create Form
+                                    </Button>
+                                </CreateFormModal>
+                            )}
                             {session && (
                                 <button
                                     onClick={() => signOut({ callbackUrl: '/auth' })}
