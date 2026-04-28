@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/auth";
 export async function POST(req: NextRequest) {
     try {
         await dbConnect();
-        const { title, description } = await req.json();
+        const { title, description, fields } = await req.json();
 
         if (!title) {
             return NextResponse.json({ error: 'Title is required' }, { status: 400 });
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
             title,
             description,
             userId,
-            fields: [],
+            fields: fields || [],
             settings: {
                 isActive: true,
             },

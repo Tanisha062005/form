@@ -41,12 +41,12 @@ export default async function PublicFormPage({
     const isExpired = expiryDate ? new Date(expiryDate) < new Date() : false;
 
     // Response Limit Check
-    const responseCount = await Submission.countDocuments({ formId: params.id });
+    const responseCount = await Submission.countDocuments({ formId: form._id.toString() });
     const isLimitReached = (form.settings?.maxResponses || 0) > 0 && responseCount >= form.settings.maxResponses;
 
     // Single Submission Check
     const cookieStore = cookies();
-    const hasSubmitted = cookieStore.get(`form_submitted_${params.id}`);
+    const hasSubmitted = cookieStore.get(`form_submitted_${form._id.toString()}`);
     const isSingleSubmissionActive = form.settings?.singleSubmission;
 
     if ((!isActive || isExpired || isLimitReached || (isSingleSubmissionActive && hasSubmitted)) && !isPreview) {

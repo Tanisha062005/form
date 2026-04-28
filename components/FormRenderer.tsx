@@ -11,11 +11,12 @@ import {
     CheckCircle2,
     Smartphone,
     Tablet,
-
     Laptop,
     MapPin,
     Navigation,
     Lock,
+    ArrowUp,
+    Star,
 } from 'lucide-react';
 import useDeviceType from '@/hooks/use-device-type';
 import { Button } from '@/components/ui/button';
@@ -121,10 +122,10 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
             if (field.type === 'email') {
                 fieldSchema = z.string().email("Invalid email format");
             } else if (field.type === 'number') {
-                let numSchema = z.string().refine((val) => !isNaN(Number(val)), "Must be a number");
+                let numSchema = z.string().refine((val) => val === "" || !isNaN(Number(val)), "Must be a number");
                 if (field.validation?.exactDigits) {
                     const digits = field.validation.exactDigits;
-                    numSchema = numSchema.refine((val) => val.length === digits, `Must be exactly ${digits} digits`);
+                    numSchema = numSchema.refine((val) => val === "" || val.length === digits, `Must be exactly ${digits} digits`);
                 }
                 fieldSchema = numSchema;
             } else if (['text', 'textarea', 'select', 'radio'].includes(field.type)) {
@@ -140,6 +141,8 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 fieldSchema = z.array(z.string());
             } else if (field.type === 'date') {
                 fieldSchema = z.date().nullable();
+            } else if (field.type === 'rating') {
+                fieldSchema = z.number().nullable();
             } else {
                 fieldSchema = z.any();
             }
@@ -149,11 +152,17 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                     fieldSchema = (fieldSchema as z.ZodArray<z.ZodString>).min(1, "Please select at least one option");
                 } else if (field.type === 'date') {
                     fieldSchema = z.date({ error: "This field is required" }).nullable().refine(val => val !== null, "This field is required");
-                } else {
+                } else if (field.type === 'rating') {
+                    fieldSchema = z.number({ message: "This field is required" }).min(1, "This field is required");
+                } else if (['text', 'textarea', 'email', 'select', 'radio'].includes(field.type)) {
                     fieldSchema = (fieldSchema as z.ZodString).min(1, "This field is required");
+                } else if (field.type === 'number') {
+                    fieldSchema = fieldSchema.refine((val: unknown) => val !== undefined && val !== null && String(val).trim().length > 0, "This field is required");
+                } else {
+                    fieldSchema = z.any().refine((val: unknown) => val !== undefined && val !== null && val !== "", "This field is required");
                 }
             } else {
-                if (field.type === 'date') {
+                if (field.type === 'date' || field.type === 'rating') {
                     fieldSchema = fieldSchema.optional().nullable();
                 } else {
                     fieldSchema = fieldSchema.optional().or(z.literal("")).or(z.null());
@@ -386,6 +395,14 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         startCountdown(data);
     };
 
+    // Scroll to top
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    React.useEffect(() => {
+        const handleScroll = () => setShowScrollTop(window.scrollY > 400);
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
     if (!isVerified && !isPreview) {
         return <LockScreen
             onVerified={() => setIsVerified(true)}
@@ -395,9 +412,69 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
 
     const isClosed = form.settings?.status === 'Closed';
 
+    // Progress Calculation
+    const totalFields = form.fields.filter(field => {
+        if (field.logic?.triggerFieldId) {
+            const triggerValue = values[field.logic.triggerFieldId];
+            const condition = field.logic.condition;
+            const targetValue = field.logic.value;
+            const isVisible = condition === 'equals'
+                ? triggerValue === targetValue
+                : triggerValue !== targetValue;
+            if (!isVisible) return false;
+        }
+        return true;
+    }).length;
+
+    const filledFields = form.fields.filter(field => {
+        if (field.logic?.triggerFieldId) {
+            const triggerValue = values[field.logic.triggerFieldId];
+            const condition = field.logic.condition;
+            const targetValue = field.logic.value;
+            const isVisible = condition === 'equals'
+                ? triggerValue === targetValue
+                : triggerValue !== targetValue;
+            if (!isVisible) return false;
+        }
+        const val = values[field.id];
+        if (field.type === 'checkbox') return Array.isArray(val) && val.length > 0;
+        if (field.type === 'date') return val !== null && val !== undefined;
+        if (field.type === 'location') return !!locationStates[field.id]?.data;
+        return val !== undefined && val !== null && val !== '';
+    }).length;
+
+    const progressPercent = totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0;
+
     return (
         <div className="min-h-screen bg-[#030014] text-white selection:bg-purple-500/30">
-            {/* Background Background */}
+            {/* Sticky Progress Bar */}
+            {!isClosed && (
+                <div className="fixed top-0 left-0 right-0 z-[60] h-1 bg-white/5">
+                    <motion.div
+                        className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-r-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressPercent}%` }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                    />
+                </div>
+            )}
+
+            {/* Scroll to top button */}
+            <AnimatePresence>
+                {showScrollTop && (
+                    <motion.button
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="fixed bottom-6 left-6 z-50 w-12 h-12 rounded-full glass bg-white/10 border border-white/20 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/20 transition-all shadow-lg"
+                    >
+                        <ArrowUp className="w-5 h-5" />
+                    </motion.button>
+                )}
+            </AnimatePresence>
+
+            {/* Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full animate-pulse" />
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
@@ -414,9 +491,9 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                     <div className="space-y-6">
                         <div className="flex items-center gap-4">
                             <span className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-white/20" />
-                            <div className="px-4 py-1.2 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
+                            <div className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-md">
                                 <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">
-                                    {isClosed ? "Responses Closed" : "Active Form"}
+                                    {isClosed ? "Responses Closed" : `${totalFields} ${totalFields === 1 ? 'Question' : 'Questions'}`}
                                 </span>
                             </div>
                             <span className="h-px flex-1 bg-gradient-to-l from-transparent via-white/10 to-white/20" />
@@ -454,7 +531,9 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                             {/* Form Fields */}
                             <div className="space-y-8">
                                 <AnimatePresence mode="popLayout">
-                                    {form.fields.map((field) => {
+                                    {(() => {
+                                        let visibleIndex = 0;
+                                        return form.fields.map((field) => {
                                         // Conditional Logic Check
                                         if (field.logic?.triggerFieldId) {
                                             const triggerValue = values[field.logic.triggerFieldId];
@@ -468,6 +547,17 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                             if (!isVisible) return null;
                                         }
 
+                                        visibleIndex++;
+                                        const currentIndex = visibleIndex;
+                                        const fieldValue = values[field.id];
+                                        const isFilled = field.type === 'checkbox'
+                                            ? Array.isArray(fieldValue) && fieldValue.length > 0
+                                            : field.type === 'date'
+                                                ? fieldValue !== null && fieldValue !== undefined
+                                                : field.type === 'location'
+                                                    ? !!locationStates[field.id]?.data
+                                                    : fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
+
                                         return (
                                             <motion.div
                                                 key={field.id}
@@ -476,14 +566,19 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.95, y: -20 }}
                                                 transition={{ duration: 0.3, ease: "easeOut" }}
-                                                className={`glass ${glassStyles.padding} rounded-3xl border border-white/5 space-y-4 transition-all hover:border-white/10 group ${glassStyles.blur}`}
+                                                className={`glass ${glassStyles.padding} rounded-3xl border ${isFilled ? 'border-green-500/20' : 'border-white/5'} space-y-4 transition-all hover:border-white/10 group ${glassStyles.blur}`}
                                             >
                                                 <div className="space-y-1">
-                                                    <Label className="text-lg font-bold flex items-center gap-2">
-                                                        {field.label}
-                                                        {field.required && <span className="text-red-500">*</span>}
-                                                    </Label>
-                                                    {field.helpText && <p className="text-sm text-muted-foreground italic font-medium opacity-70">{field.helpText}</p>}
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-black transition-all ${isFilled ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 text-white/30 border border-white/10'}`}>
+                                                            {isFilled ? '✓' : currentIndex}
+                                                        </span>
+                                                        <Label className="text-lg font-bold flex items-center gap-2">
+                                                            {field.label}
+                                                            {field.required && <span className="text-red-500">*</span>}
+                                                        </Label>
+                                                    </div>
+                                                    {field.helpText && <p className="text-sm text-muted-foreground italic font-medium opacity-70 ml-11">{field.helpText}</p>}
                                                 </div>
 
                                                 <div className="pt-2">
@@ -537,6 +632,25 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                                                 </label>
                                                             ))}
                                                         </div>
+                                                    ) : field.type === 'rating' ? (
+                                                        <Controller
+                                                            name={field.id}
+                                                            control={control}
+                                                            render={({ field: { value, onChange } }) => (
+                                                                <div className="flex items-center gap-2">
+                                                                    {[1, 2, 3, 4, 5].map((star) => (
+                                                                        <button
+                                                                            key={star}
+                                                                            type="button"
+                                                                            onClick={() => onChange(star)}
+                                                                            className={`p-2 transition-all hover:scale-110 focus:outline-none ${typeof value === 'number' && value >= star ? 'text-yellow-400' : 'text-white/20 hover:text-yellow-400/50'}`}
+                                                                        >
+                                                                            <Star className="w-10 h-10 fill-current" />
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        />
                                                     ) : field.type === 'date' ? (
                                                         <Controller
                                                             name={field.id}
@@ -811,16 +925,47 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                                 </div>
                                             </motion.div>
                                         );
-                                    })}
+                                    });
+                                    })()}
                                 </AnimatePresence>
                             </div>
 
                             {/* Submit Button */}
-                            <div className="pt-12">
+                            <div className="pt-12 space-y-4">
+                                {/* Completion Status */}
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-center space-y-3"
+                                >
+                                    <div className="flex items-center justify-center gap-3">
+                                        <div className="h-2 flex-1 max-w-[200px] bg-white/5 rounded-full overflow-hidden">
+                                            <motion.div
+                                                className={`h-full rounded-full ${progressPercent === 100 ? 'bg-gradient-to-r from-green-500 to-emerald-500' : 'bg-gradient-to-r from-purple-500 to-indigo-500'}`}
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${progressPercent}%` }}
+                                                transition={{ duration: 0.5 }}
+                                            />
+                                        </div>
+                                        <span className={`text-sm font-bold ${progressPercent === 100 ? 'text-green-400' : 'text-white/40'}`}>
+                                            {progressPercent}%
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-white/30 font-medium">
+                                        {progressPercent === 100
+                                            ? '🎉 All fields completed! Ready to submit.'
+                                            : `${filledFields} of ${totalFields} fields completed`}
+                                    </p>
+                                </motion.div>
+
                                 <Button
                                     type="submit"
                                     disabled={submitting || isPreview}
-                                    className="w-full h-20 text-2xl font-black rounded-3xl bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-[0_0_40px_rgba(147,51,234,0.3)] transition-all hover:scale-[1.02] active:scale-[0.98] border-0 gap-4"
+                                    className={`w-full h-20 text-2xl font-black rounded-3xl transition-all hover:scale-[1.02] active:scale-[0.98] border-0 gap-4 ${
+                                        progressPercent === 100
+                                            ? 'bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-500 hover:to-teal-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]'
+                                            : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-[0_0_40px_rgba(147,51,234,0.3)]'
+                                    }`}
                                 >
                                     {submitting ? (
                                         <>

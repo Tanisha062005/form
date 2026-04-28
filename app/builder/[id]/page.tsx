@@ -25,6 +25,7 @@ import {
     Shield,
     Globe,
     MapPin,
+    Star,
 } from 'lucide-react';
 import {
     DndContext,
@@ -96,6 +97,7 @@ const componentList = [
     { type: 'date', label: 'Date Picker', icon: Calendar },
     { type: 'file', label: 'File Upload', icon: Upload },
     { type: 'location', label: 'Location Sensor', icon: MapPin },
+    { type: 'rating', label: 'Rating', icon: Star },
 ];
 
 export default function BuilderPage() {

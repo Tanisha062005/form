@@ -53,7 +53,7 @@ export default function ResponseHeader({ form, submissions }: { form: Form, subm
     const [isCopied, setIsCopied] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
 
-    const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/f/${form._id}` : '';
+    const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/f/${form._id}` : `https://flowform-self.vercel.app/f/${form._id}`;
 
     const handleToggleActive = async (checked: boolean) => {
         setIsUpdating(true);
