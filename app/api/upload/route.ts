@@ -20,18 +20,26 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
-            cloudinary.uploader.upload_stream(
-                {
-                    folder: "formflow_uploads",
-                    resource_type: "auto",
-                },
-                (error, result) => {
-                    if (error) reject(error);
-                    else if (result) resolve(result);
-                    else reject(new Error('Upload failed'));
-                }
-            ).end(buffer);
+        // Convert to base64 data URI — most reliable method for all file types
+        const base64 = buffer.toString('base64');
+        const dataURI = `data:${file.type};base64,${base64}`;
+
+        // Determine resource type based on mime type.
+        // 'raw' is REQUIRED for PDFs & documents — other types will corrupt them.
+        let resourceType: "image" | "video" | "raw" = "raw";
+        if (file.type.startsWith('image/')) {
+            resourceType = 'image';
+        } else if (file.type.startsWith('video/')) {
+            resourceType = 'video';
+        }
+
+        // Use cloudinary.uploader.upload (not upload_stream) with base64 data URI.
+        // This avoids all Node.js stream/pipe corruption issues with binary files.
+        const result = await cloudinary.uploader.upload(dataURI, {
+            folder: "formflow_uploads",
+            resource_type: resourceType,
+            public_id: `${Date.now()}_${file.name.replace(/\.[^/.]+$/, "")}`,
+            use_filename: true,
         });
 
         return NextResponse.json({ url: result.secure_url });

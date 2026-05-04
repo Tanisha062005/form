@@ -59,10 +59,18 @@ export default function ExportCSV({ form, submissions }: ExportCSVProps) {
                     // Handle special field types
                     if (field.type === 'location' && value && typeof value === 'object') {
                         value = (value as { address?: string }).address || 'N/A';
-                    } else if (field.type === 'file' && value) {
-                        value = value as string; // Keep URL as is
                     } else if (Array.isArray(value)) {
                         value = value.join(', ');
+                    } else if (typeof value === 'object' && value !== null) {
+                        if ('url' in value && typeof (value as any).url === 'string') {
+                            value = (value as any).url;
+                        } else if ('address' in value && typeof (value as any).address === 'string') {
+                            value = (value as any).address;
+                        } else if ('secure_url' in value && typeof (value as any).secure_url === 'string') {
+                            value = (value as any).secure_url;
+                        } else {
+                            value = JSON.stringify(value);
+                        }
                     } else if (value === null || value === undefined || value === '') {
                         value = 'N/A';
                     }

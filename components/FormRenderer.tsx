@@ -284,6 +284,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                         if (locationStates[key]?.data) {
                             acc[key] = {
                                 address: locationStates[key].data?.address,
+                                url: (locationStates[key].data as any)?.url,
                                 latitude: locationStates[key].data?.lat,
                                 longitude: locationStates[key].data?.lng,
                                 method: locationStates[key].data?.method,
@@ -719,6 +720,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                                                                 mode: 'auto',
                                                                                 data: {
                                                                                     address: file.name, // Reusing address field for filename
+                                                                                    url: data.url,
                                                                                     method: 'auto',
                                                                                     timestamp: new Date()
                                                                                 }

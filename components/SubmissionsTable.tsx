@@ -125,8 +125,9 @@ export default function SubmissionsTable({ form, submissions }: { form: Form, su
                                     {/* Form Fields */}
                                     {form.fields.map((field: Field) => {
                                         let val = submission.answers[field.id];
+                                        let fileUrl: string | null = null;
 
-                                        // Handle location field
+                                        // Handle location field (address only, no url)
                                         if (field.type === 'location' && val && typeof val === 'object') {
                                             val = (val as { address?: string }).address || 'N/A';
                                         }
@@ -134,10 +135,26 @@ export default function SubmissionsTable({ form, submissions }: { form: Form, su
                                         // Handle array values
                                         if (Array.isArray(val)) {
                                             val = val.join(', ');
+                                        } else if (typeof val === 'object' && val !== null) {
+                                            const obj = val as Record<string, unknown>;
+                                            // Check url/secure_url FIRST — file uploads store the Cloudinary link here
+                                            if (typeof obj.url === 'string') {
+                                                fileUrl = obj.url;
+                                                val = obj.address || obj.url; // show filename as label, url for button
+                                            } else if (typeof obj.secure_url === 'string') {
+                                                fileUrl = obj.secure_url;
+                                                val = obj.address || obj.secure_url;
+                                            } else if (typeof obj.address === 'string') {
+                                                // Pure location field — no url stored
+                                                val = obj.address;
+                                            } else {
+                                                val = JSON.stringify(val);
+                                            }
                                         }
 
-                                        // Check if it's a file URL
-                                        const isFile = isFileUrl(val);
+                                        // Also detect if val itself is a direct file URL string
+                                        const isFile = fileUrl !== null || isFileUrl(val);
+                                        const viewHref = fileUrl || (isFileUrl(val) ? val as string : null);
                                         const displayVal = val as React.ReactNode;
 
                                         return (
@@ -145,16 +162,17 @@ export default function SubmissionsTable({ form, submissions }: { form: Form, su
                                                 {val ? (
                                                     isFile ? (
                                                         <div className="flex items-center gap-3">
-                                                            <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 text-foreground truncate max-w-[200px]">
-                                                                File uploaded
+                                                            <span className="bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 text-foreground truncate max-w-[180px]" title={String(val)}>
+                                                                {String(val)}
                                                             </span>
                                                             <Button
                                                                 variant="ghost"
                                                                 size="sm"
-                                                                onClick={() => window.open(val as string, '_blank')}
-                                                                className="p-2 h-auto rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 transition-all group/preview"
+                                                                onClick={() => window.open(viewHref!, '_blank')}
+                                                                className="p-2 h-auto rounded-lg bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 transition-all group/preview flex items-center gap-1.5"
                                                             >
                                                                 <Eye className="w-4 h-4 text-purple-400 group-hover/preview:scale-110 transition-transform" />
+                                                                <span className="text-xs text-purple-400 font-medium">View</span>
                                                             </Button>
                                                         </div>
                                                     ) : (
