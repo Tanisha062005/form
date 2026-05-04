@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,6 +15,11 @@ const Navbar = () => {
     const { data: session } = useSession();
     const { isOffline, isSyncing, pendingCount } = useOfflineSync();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+    const pathname = usePathname();
+
+    if (pathname?.startsWith('/f/')) {
+        return null;
+    }
 
     return (
         <motion.nav
