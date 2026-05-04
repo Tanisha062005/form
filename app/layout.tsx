@@ -5,6 +5,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { Providers } from "@/components/Providers";
 import { Toaster } from "@/components/ui/toaster";
+import { MainLayoutWrapper } from "@/components/MainLayoutWrapper";
 
 const poppins = Poppins({
   weight: ["400", "500", "600", "700"],
@@ -40,9 +41,9 @@ export default function RootLayout({
       >
         <Providers>
           <Navbar />
-          <main className="pt-32 pb-12 px-6">
+          <MainLayoutWrapper>
             {children}
-          </main>
+          </MainLayoutWrapper>
           <Toaster />
         </Providers>
       </body>

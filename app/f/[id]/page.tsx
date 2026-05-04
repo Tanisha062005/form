@@ -88,9 +88,9 @@ export default async function PublicFormPage({
     }
 
     return (
-        <div className="max-w-4xl mx-auto py-12 px-6 space-y-8">
+        <div className="min-h-screen w-full relative">
             {isPreview && (
-                <div className="glass p-4 rounded-2xl border-purple-500/50 bg-purple-500/10 flex items-center justify-between">
+                <div className="fixed bottom-0 left-0 right-0 z-[100] glass p-4 border-t border-purple-500/50 bg-purple-500/10 flex items-center justify-center">
                     <div className="flex items-center gap-3 text-purple-300">
                         <Eye className="w-5 h-5" />
                         <p className="font-semibold">Preview Mode: Submissions are disabled.</p>

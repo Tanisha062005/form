@@ -449,7 +449,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
         <div className="min-h-screen bg-[#030014] text-white selection:bg-purple-500/30">
             {/* Sticky Progress Bar */}
             {!isClosed && (
-                <div className="fixed top-0 left-0 right-0 z-[60] h-1 bg-white/5">
+                <div className="fixed top-0 left-0 right-0 z-[70] h-1 bg-white/5">
                     <motion.div
                         className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-blue-500 rounded-r-full"
                         initial={{ width: 0 }}
@@ -458,6 +458,17 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                     />
                 </div>
             )}
+
+            {/* Minimal Top Bar */}
+            <div className="fixed top-0 left-0 right-0 z-[60] glass bg-[#030014]/80 backdrop-blur-xl border-b border-white/5 px-6 h-[72px] flex items-center justify-between">
+                <div className="text-xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/60">
+                    FormFlow
+                </div>
+                <div className="text-sm font-semibold text-white/60 truncate px-4 max-w-[50%] text-center">
+                    {form.title}
+                </div>
+                <div className="w-20"></div>
+            </div>
 
             {/* Scroll to top button */}
             <AnimatePresence>
@@ -480,7 +491,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }} />
             </div>
 
-            <div className="max-w-4xl mx-auto px-6 py-12 md:py-24 relative z-10">
+            <div className="max-w-3xl mx-auto px-4 pt-32 pb-24 relative z-10">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -566,19 +577,19 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                 exit={{ opacity: 0, scale: 0.95, y: -20 }}
                                                 transition={{ duration: 0.3, ease: "easeOut" }}
-                                                className={`glass ${glassStyles.padding} rounded-3xl border ${isFilled ? 'border-green-500/20' : 'border-white/5'} space-y-4 transition-all hover:border-white/10 group ${glassStyles.blur}`}
+                                                className={`py-12 border-b ${isFilled ? 'border-green-500/30' : 'border-white/10'} space-y-6 transition-all group last:border-0`}
                                             >
-                                                <div className="space-y-1">
-                                                    <div className="flex items-center gap-3">
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-4">
                                                         <span className={`flex items-center justify-center w-8 h-8 rounded-full text-xs font-black transition-all ${isFilled ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-white/5 text-white/30 border border-white/10'}`}>
                                                             {isFilled ? '✓' : currentIndex}
                                                         </span>
-                                                        <Label className="text-lg font-bold flex items-center gap-2">
+                                                        <Label className="text-2xl font-bold flex items-center gap-2 tracking-tight">
                                                             {field.label}
                                                             {field.required && <span className="text-red-500">*</span>}
                                                         </Label>
                                                     </div>
-                                                    {field.helpText && <p className="text-sm text-muted-foreground italic font-medium opacity-70 ml-11">{field.helpText}</p>}
+                                                    {field.helpText && <p className="text-base text-muted-foreground italic font-medium opacity-70 ml-12">{field.helpText}</p>}
                                                 </div>
 
                                                 <div className="pt-2">
