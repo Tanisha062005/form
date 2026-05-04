@@ -57,60 +57,31 @@ export async function POST(
             }
         }
 
-        // Check for existing submissions from the same session/IP within 10 minutes for editing
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
         const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
 
-        // Try to find a recent submission to "edit"
-        const existingSubmission = await Submission.findOne({
+        // Always create a new submission — never merge/overwrite responses
+        const submission = await Submission.create({
             formId: id,
-            'metadata.ip': ip,
-            'metadata.userAgent': userAgent || 'unknown',
-            submittedAt: { $gte: tenMinutesAgo }
-        }).sort({ submittedAt: -1 });
+            answers,
+            metadata: {
+                ip,
+                userAgent: userAgent || 'unknown',
+                device,
+                location: locationData,
+            },
+            submittedAt: new Date(),
+        });
 
-        let submission;
-        if (existingSubmission) {
-            // Update existing submission
-            existingSubmission.answers = answers;
-            // Keep original submittedAt to maintain the fixed 10-minute window from start
-            submission = await existingSubmission.save();
-
-            // Log activity: Response Received (Update)
-            await FormActivity.create({
-                formId: id,
-                eventType: 'response_received',
-                description: 'Response updated within edit window',
-                metadata: {
-                    submissionId: submission._id,
-                    device,
-                },
-            });
-        } else {
-            // 2. Save the response object into the Submissions collection
-            submission = await Submission.create({
-                formId: id,
-                answers,
-                metadata: {
-                    ip,
-                    userAgent: userAgent || 'unknown',
-                    device,
-                    location: locationData,
-                },
-                submittedAt: new Date(),
-            });
-
-            // 3. Log activity
-            await FormActivity.create({
-                formId: id,
-                eventType: 'response_received',
-                description: 'New response submitted',
-                metadata: {
-                    submissionId: submission._id,
-                    device,
-                },
-            });
-        }
+        // Log activity
+        await FormActivity.create({
+            formId: id,
+            eventType: 'response_received',
+            description: 'New response submitted',
+            metadata: {
+                submissionId: submission._id,
+                device,
+            },
+        });
 
         return NextResponse.json({
             success: true,

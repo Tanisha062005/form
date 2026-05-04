@@ -59,7 +59,7 @@ export default function ResponseChart({ label, data, total }: ResponseChartProps
                         <p className="text-sm text-white/30 font-medium italic">No data to visualize yet</p>
                     </div>
                 ) : (
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <PieChart>
                             <Pie
                                 data={data}
