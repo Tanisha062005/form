@@ -91,6 +91,7 @@ export default async function Admin69Page({ searchParams }: { searchParams: { er
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5 bg-transparent">
+                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                             {forms.map((form: any) => (
                                 <tr key={form._id.toString()} className="hover:bg-white/5 transition-colors group">
                                     <td className="px-6 py-4 whitespace-nowrap">

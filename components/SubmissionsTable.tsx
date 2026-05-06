@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Eye, Smartphone, Tablet, Laptop, MapPin } from 'lucide-react';
+import { Eye, Smartphone, Tablet, Laptop, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Field {
@@ -31,6 +31,9 @@ interface Submission {
 }
 
 export default function SubmissionsTable({ form, submissions }: { form: Form, submissions: Submission[] }) {
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
     if (submissions.length === 0) {
         return (
             <div className="glass backdrop-blur-xl rounded-[2rem] p-20 text-center border-white/5">
@@ -38,6 +41,15 @@ export default function SubmissionsTable({ form, submissions }: { form: Form, su
             </div>
         );
     }
+
+    const totalPages = Math.ceil(submissions.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const currentSubmissions = submissions.slice(startIndex, startIndex + itemsPerPage);
+
+    const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setItemsPerPage(Number(e.target.value));
+        setCurrentPage(1);
+    };
 
     const getDeviceIcon = (device: string) => {
         switch (device) {
@@ -58,7 +70,47 @@ export default function SubmissionsTable({ form, submissions }: { form: Form, su
     };
 
     return (
-        <div className="glass backdrop-blur-xl rounded-[2rem] border-white/5 overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+        <div className="glass backdrop-blur-xl rounded-[2rem] border-white/5 overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.3)] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-white/5 flex-wrap gap-4">
+                <div className="text-sm text-muted-foreground">
+                    Showing <span className="text-white font-medium">{startIndex + 1}</span> to <span className="text-white font-medium">{Math.min(startIndex + itemsPerPage, submissions.length)}</span> of <span className="text-white font-medium">{submissions.length}</span> entries
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Rows per page:</span>
+                        <select 
+                            value={itemsPerPage} 
+                            onChange={handleItemsPerPageChange}
+                            className="bg-black/20 border border-white/10 rounded-lg px-2 py-1 text-white focus:outline-none focus:border-purple-500/50"
+                        >
+                            <option value={10}>10</option>
+                            <option value={25}>25</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                        </select>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="w-8 h-8 border-white/10 bg-white/5 hover:bg-white/10"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            className="w-8 h-8 border-white/10 bg-white/5 hover:bg-white/10"
+                        >
+                            <ChevronRight className="w-4 h-4" />
+                        </Button>
+                    </div>
+                </div>
+            </div>
             <ScrollArea className="w-full">
                 <div className="min-w-full inline-block align-middle">
                     <table className="min-w-full divide-y divide-white/5">
@@ -81,7 +133,7 @@ export default function SubmissionsTable({ form, submissions }: { form: Form, su
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5 bg-transparent">
-                            {submissions.map((submission) => (
+                            {currentSubmissions.map((submission) => (
                                 <tr key={submission._id} className="hover:bg-white/5 transition-colors group">
                                     {/* Submission Time */}
                                     <td className="px-6 py-6 whitespace-nowrap text-sm font-medium sticky left-0 bg-black/20 backdrop-blur-md group-hover:bg-white/5 z-10">

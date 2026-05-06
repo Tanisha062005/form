@@ -7,7 +7,6 @@ import { notFound, redirect } from 'next/navigation';
 import {
     BarChart3,
     Table as TableIcon,
-    ShieldAlert,
     ArrowLeft
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -59,7 +58,7 @@ export default async function AdminResponsesPage({ params }: { params: { id: str
 
             <div className="grid grid-cols-1 xl:grid-cols-[1fr_350px] gap-8">
                 {/* Main Content */}
-                <div className="space-y-12">
+                <div className="space-y-12 min-w-0">
                     {/* Header with Actions & QR */}
                     <ResponseHeader form={form} submissions={submissions} />
 

@@ -284,7 +284,7 @@ export function FormRenderer({ form, isPreview = false }: FormRendererProps) {
                         if (locationStates[key]?.data) {
                             acc[key] = {
                                 address: locationStates[key].data?.address,
-                                url: (locationStates[key].data as any)?.url,
+                                url: (locationStates[key].data as Record<string, unknown>)?.url,
                                 latitude: locationStates[key].data?.lat,
                                 longitude: locationStates[key].data?.lng,
                                 method: locationStates[key].data?.method,
